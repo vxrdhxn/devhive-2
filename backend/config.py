@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     
     # Database configuration
     database_url: PostgresDsn = Field(
-        default="postgresql://ktp_user:ktp_password@localhost:5432/ktp_db",
+        default="postgresql+pg8000://ktp_user:ktp_password@localhost:5432/ktp_db",
         description="PostgreSQL connection URL"
     )
     db_pool_size: int = Field(
