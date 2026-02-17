@@ -1,0 +1,5 @@
+[33m45b7171[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Updated UI
+[33mf66522a[m Edited Name
+[33mafacda8[m Update .gitignore and SETUP.md to reflect secure token management approach
+[33m7d33aa4[m Resolved issues
+[33ma2c9488[m Add .gitignore, env template, and setup guide - Remove sensitive files from tracking

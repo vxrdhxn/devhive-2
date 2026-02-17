@@ -1,0 +1,25 @@
+services:
+  # KTP Full Stack Service (Flask Backend + Streamlit Frontend)
+  - type: web
+    name: ktp-app
+    env: python
+    plan: free
+    buildCommand: pip install -r server/requirements.txt
+    startCommand: python app.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.16
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: PINECONE_INDEX_NAME
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: NOTION_TOKEN
+        sync: false
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: FLASK_API_URL
+        value: "http://localhost:5000" 
