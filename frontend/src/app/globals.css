@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: "Inter", "Geist Sans", sans-serif;
+  --font-mono: "Geist Mono", monospace;
+  
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #000000;
+  --border: #eaeaea;
+  --muted: #666666;
+  --accent: #0070f3;
+  --card: #ffffff;
+}
+
+.dark {
+  --background: #000000;
+  --foreground: #fafafa;
+  --border: #333333;
+  --muted: #888888;
+  --accent: #ffffff;
+  --card: #0a0a0a;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+* {
+  border-color: var(--border);
+}
+
+/* Hide scrollbars but keep functionality */
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+*::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari and Opera */
+}

@@ -1,0 +1,57 @@
+# Node
+node_modules/
+.next/
+dist/
+build/
+# Environment Files & Secrets
+.env
+.env.local
+.env.*.local
+.env.*
+**/.env
+**/.env.*
+.vercel
+*.pem
+*.key
+auth_token*
+config_secret*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.docs
+.venv
+venv/
+ENV/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Project specific
+backend/alembic/versions/*.pyc
+!backend/alembic/versions/*.py
