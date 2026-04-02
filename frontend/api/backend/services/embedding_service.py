@@ -26,8 +26,8 @@ class EmbeddingService:
             raise ValueError("Hugging Face client is not initialized")
             
         embeddings = await self._client.feature_extraction(text)
-        # Convert numpy array to list if needed
-        return embeddings[0] if isinstance(embeddings, list) else embeddings.tolist()[0]
+        # For a single string input, huggingface_hub returns a flat sequence (list or ndarray shape (D,))
+        return embeddings if isinstance(embeddings, list) else embeddings.tolist()
 
     async def batch_generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Generate embeddings for a list of text chunks with robust retries"""
