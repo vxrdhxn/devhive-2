@@ -29,7 +29,8 @@ export function UploadPanel() {
       const formData = new FormData()
       formData.append("file", file)
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/documents/upload`, {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "/api"
+      const res = await fetch(`${backendUrl}/documents/upload`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session?.access_token}`
@@ -37,14 +38,19 @@ export function UploadPanel() {
         body: formData
       })
       
-      if (!res.ok) throw new Error("Upload failed")
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.detail || "Upload failed")
+      }
       
       setStatus("success")
       setFile(null)
     } catch (err: any) {
+      console.error("Upload error details:", err)
       if (err.name === "TypeError" && err.message === "Failed to fetch") {
         setStatus("offline")
       } else {
+        alert(`Ingestion failed: ${err.message}`)
         setStatus("error")
       }
     } finally {

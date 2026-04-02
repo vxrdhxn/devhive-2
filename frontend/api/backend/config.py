@@ -53,13 +53,13 @@ class Settings(BaseSettings):
     
     # CORS
     cors_origins: str = Field(
-        default="http://localhost:3000",
+        default="*",
         description="Comma-separated list of allowed CORS origins"
     )
     
     # Logging
     log_level: str = Field(
-        default="INFO",
+        default="DEBUG",
         description="Logging level"
     )
     

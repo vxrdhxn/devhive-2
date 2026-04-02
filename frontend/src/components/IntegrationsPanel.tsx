@@ -94,18 +94,26 @@ export function IntegrationsPanel() {
   const handleRemove = async (integrationId: string) => {
     if (!confirm("Are you sure you want to remove this connection? This will stop all synchronization.")) return
     
-    const { error } = await supabase
-      .from('integrations')
-      .delete()
-      .eq('id', integrationId)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "/api"
+      const response = await fetch(`${backendUrl}/integrations/${integrationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`
+        }
+      })
 
-    if (error) {
-      console.error("Failed to delete integration:", error)
-      alert("Failed to remove connection")
-      return
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData.detail || "Removal failed")
+      }
+      
+      setConnections(prev => prev.filter(c => c.id !== integrationId))
+    } catch (err: any) {
+      console.error("Failed to delete integration:", err)
+      alert(`Removal failed: ${err.message}`)
     }
-    
-    setConnections(prev => prev.filter(c => c.id !== integrationId))
   }
 
   const handleSync = async (integrationId: string) => {
