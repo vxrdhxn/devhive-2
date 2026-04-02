@@ -32,12 +32,8 @@ try:
     print("✅ [BOOT] Auth dependencies loaded")
 
     # 2. Set Model Cache Environment Variables (Crucial for Render persistence)
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    model_cache = os.path.join(base_dir, ".model_cache")
-    os.makedirs(model_cache, exist_ok=True)
-    os.environ["SENTENCE_TRANSFORMERS_HOME"] = model_cache
-    os.environ["TRANSFORMERS_CACHE"] = model_cache
-    print(f"✅ [BOOT] Model cache path configured: {model_cache}")
+    # Cache no longer needed since we use HuggingFace inference API
+    print("✅ [BOOT] Model cache not required for API-based embeddings")
 
     # 3. Import routers individually with logging to pinpoint hangs
     import backend.routers.documents as documents
@@ -60,7 +56,7 @@ except Exception as e:
     raise e
 
 settings = get_settings()
-app = FastAPI(title="KTP Backend API")
+app = FastAPI(title="KTP Backend API", root_path="/api")
 print("✅ [BOOT] FastAPI application instance created")
 
 app.add_middleware(

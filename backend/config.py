@@ -24,7 +24,11 @@ class Settings(BaseSettings):
     # Embedding Configuration
     embedding_model: str = Field(
         default="BAAI/bge-small-en-v1.5",
-        description="SentenceTransformer model name"
+        description="SentenceTransformer or HuggingFace model name"
+    )
+    huggingface_api_key: Optional[str] = Field(
+        default=None,
+        description="API key for HuggingFace Inference API (Optional but recommended to avoid rate limits)"
     )
     embedding_batch_size: int = Field(
         default=32,
