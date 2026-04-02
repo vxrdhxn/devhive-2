@@ -30,7 +30,6 @@ async def upload_document(
         print("DEBUG: Upload failed - No filename")
         raise HTTPException(status_code=400, detail="No file selected")
 
-    # Read the file content immediately before background task
     try:
         content = await file.read()
         print(f"DEBUG: Successfully read {len(content)} bytes from {file.filename}")
@@ -38,30 +37,22 @@ async def upload_document(
         print(f"DEBUG: Upload failed during file read: {e}")
         raise HTTPException(status_code=400, detail=f"Could not read file contents: {str(e)}")
         
-    # We use a background task to process and embed since it can be slow
-    async def background_process(content: bytes, filename: str, content_type: str, user_id: str):
-        print(f"DEBUG: Starting background ingestion for {filename}")
-        try:
-            await ingestion_service.process_and_store_document(
-                file_content=content,
-                filename=filename,
-                file_type=content_type,
-                user_id=user_id
-            )
-            print(f"DEBUG: Background ingestion SUCCEEDED for {filename}")
-        except Exception as e:
-            print(f"DEBUG: Background task failed for document {filename}: {e}")
+    print(f"DEBUG: Starting ingestion for {file.filename}")
+    try:
+        # Await the process before returning so Vercel Serverless does not freeze the context
+        result = await ingestion_service.process_and_store_document(
+            file_content=content,
+            filename=file.filename,
+            file_type=file.content_type or "text/plain",
+            user_id=current_user.id
+        )
+        print(f"DEBUG: Ingestion SUCCEEDED for {file.filename}")
+    except Exception as e:
+        print(f"DEBUG: Task failed for document {file.filename}: {e}")
+        raise HTTPException(status_code=500, detail=f"Ingestion failed: {str(e)}")
 
-    background_tasks.add_task(
-        background_process, 
-        content, 
-        file.filename, 
-        file.content_type or "text/plain", 
-        current_user.id
-    )
-
-    print(f"DEBUG: Returning success for initial upload of {file.filename}")
-    return {"message": "Document accepted for processing", "filename": file.filename}
+    print(f"DEBUG: Returning success for upload of {file.filename}")
+    return {"message": "Document processed and inserted successfully", "filename": file.filename}
 
 @router.get("/")
 async def get_documents(current_user: User = Depends(get_current_user)):
@@ -86,14 +77,11 @@ async def delete_document(document_id: str, current_user: User = Depends(get_cur
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase not configured")
 
-    # Supabase handles cascading deletes to the chunks table due to ON DELETE CASCADE
-    # We restrict it by uploaded_by for security
-    response = await anyio.to_thread.run_sync(
-        lambda: supabase.table("documents").delete().eq("id", document_id).eq("uploaded_by", current_user.id).execute()
-    )
-    
-    # If the response data is empty, it means no row was deleted (not found or not owner)
-    if not response.data:
-        raise HTTPException(status_code=404, detail="Document not found or permission denied")
+    try:
+        response = await anyio.to_thread.run_sync(
+            lambda: supabase.table("documents").delete().eq("id", document_id).eq("uploaded_by", current_user.id).execute()
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
         
     return {"message": "Document deleted successfully"}

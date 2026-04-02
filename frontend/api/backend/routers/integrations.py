@@ -70,3 +70,20 @@ async def get_integrations(current_user: User = Depends(get_current_user)):
         return []
     res = supabase.table("integrations").select("*").eq("user_id", current_user.id).execute()
     return res.data or []
+
+@router.delete("/{integration_id}")
+async def delete_integration(
+    integration_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Remove an integration connection.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase client not initialized")
+        
+    try:
+        response = supabase.table("integrations").delete().eq("id", integration_id).eq("user_id", current_user.id).execute()
+        return {"message": "Integration removed successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to remove integration: {str(e)}")
