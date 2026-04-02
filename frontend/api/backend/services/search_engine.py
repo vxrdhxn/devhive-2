@@ -20,19 +20,27 @@ class SearchEngine:
         query_vector = await embedding_service.generate_embedding(query)
         
         # 2. Perform similarity search using the match_chunks RPC
-        response = supabase.rpc(
-            'match_chunks',
-            {
-                'query_embedding': query_vector,
-                'match_threshold': min_similarity,
-                'match_count': top_k,
-                'user_id': user_id
-            }
-        ).execute()
+        try:
+            response = supabase.rpc(
+                'match_chunks',
+                {
+                    'query_embedding': query_vector,
+                    'match_threshold': min_similarity,
+                    'match_count': top_k,
+                    'user_id': user_id
+                }
+            ).execute()
+        except Exception as e:
+            print(f"ERROR: Supabase RPC call failed: {e}")
+            raise ValueError(f"Vector search RPC failed: {str(e)}")
+
+        if hasattr(response, 'error') and response.error:
+            print(f"ERROR: PostgREST error in match_chunks: {response.error}")
+            raise ValueError(f"Database error during vector search: {response.error.get('message', 'Unknown error')}")
 
         results = response.data
-        if not results:
-            print("DEBUG: No chunks returned from match_chunks RPC")
+        if results is None:
+            print("DEBUG: match_chunks RPC returned None data")
             return []
             
         print(f"DEBUG: match_chunks RPC returned {len(results)} results")

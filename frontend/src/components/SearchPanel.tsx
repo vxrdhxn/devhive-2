@@ -60,15 +60,18 @@ export function SearchPanel() {
         })
       })
 
-      if (!res.ok) throw new Error("Search request failed")
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ detail: "Unknown server error" }));
+        throw new Error(errorData.detail || "Search request failed");
+      }
       
-      const data: SearchResponse = await res.json()
-      setResults(data)
-    } catch (err) {
-      console.error(err)
-      setError("An error occurred while communicating with the AI search engine.")
+      const data: SearchResponse = await res.json();
+      setResults(data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "An error occurred while communicating with the AI search engine.");
     } finally {
-      setSearching(false)
+      setSearching(false);
     }
   }
 
