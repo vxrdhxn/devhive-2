@@ -49,26 +49,36 @@ async def get_overview_stats(current_user: User = Depends(require_admin_or_manag
 
 @router.get("/trends")
 async def get_query_trends(current_user: User = Depends(require_admin_or_manager)):
-    """Get query counts over the last 7 days."""
+    """Get query counts over the last 7-30 days with a guaranteed timeline."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase not configured")
 
-    # Fetch last 30 days of logs (to be safe)
-    thirty_days_ago = (datetime.now() - timedelta(days=30)).isoformat()
+    # 1. Fetch last 30 days of logs
+    thirty_days_ago = (datetime.now() - timedelta(days=30)).replace(hour=0, minute=0, second=0).isoformat()
     
     logs_res = await anyio.to_thread.run_sync(
         lambda: supabase.table("query_logs").select("created_at").gte("created_at", thirty_days_ago).execute()
     )
     
-    # Simple grouping by date
-    trends = {}
+    # 2. Count logs per date
+    raw_trends = {}
     for log in (logs_res.data or []):
         date_str = log['created_at'].split('T')[0]
-        trends[date_str] = trends.get(date_str, 0) + 1
+        raw_trends[date_str] = raw_trends.get(date_str, 0) + 1
         
-    # Format for Recharts
-    sorted_dates = sorted(trends.keys())
-    chart_data = [{"date": d, "queries": trends[d]} for d in sorted_dates]
+    # 3. Create a GUARANTEED timeline for at least the last 7 days
+    chart_data = []
+    today = datetime.now().date()
+    for i in range(29, -1, -1): # Last 30 days
+        d = today - timedelta(days=i)
+        date_str = d.isoformat()
+        
+        # Only include dates that have data, OR the most recent 7 days to keep it clean
+        if date_str in raw_trends or i < 7:
+            chart_data.append({
+                "date": d.strftime("%b %d"), # Formatting for better axis display
+                "queries": raw_trends.get(date_str, 0)
+            })
     
     return chart_data
 

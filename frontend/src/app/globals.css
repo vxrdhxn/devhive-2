@@ -15,6 +15,7 @@
   --border: #eaeaea;
   --muted: #666666;
   --accent: #0070f3;
+  --primary: #0070f3;
   --card: #ffffff;
 }
 
@@ -24,6 +25,7 @@
   --border: #333333;
   --muted: #888888;
   --accent: #ffffff;
+  --primary: #ffffff;
   --card: #0a0a0a;
 }
 
