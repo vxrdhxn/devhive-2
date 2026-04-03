@@ -94,7 +94,8 @@ async def perform_search(
                 supabase.table("query_logs").insert({
                     "user_id": current_user.id,
                     "query": request.query,
-                    "response": ai_answer
+                    "response": ai_answer,
+                    "confidence": confidence
                 }).execute()
             except Exception as e:
                 print(f"Failed to log query: {e}")

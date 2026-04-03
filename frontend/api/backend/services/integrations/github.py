@@ -15,12 +15,10 @@ class GitHubAdapter(BaseIntegrationAdapter):
             raise Exception("GitHub requires a repository URL in the Endpoint URI field")
             
         # 1. Parse repository Owner and Name from URL
-        # e.g. https://github.com/google/guava -> google/guava
         repo_parts = base_url.rstrip('/').split('/')
         if len(repo_parts) < 2:
             raise Exception(f"Invalid GitHub URL format: {base_url}")
         
-        # Pull the last two parts for Owner/Repo
         repo_full_name = f"{repo_parts[-2]}/{repo_parts[-1]}"
         api_base = f"https://api.github.com/repos/{repo_full_name}"
         
@@ -28,53 +26,62 @@ class GitHubAdapter(BaseIntegrationAdapter):
             "Accept": "application/vnd.github.v3+json",
             "User-Agent": "Dev-Hive-KTP"
         }
-        
-        # Add basic auth if token is provided
         if api_token:
             headers["Authorization"] = f"token {api_token}"
             
         async with httpx.AsyncClient() as client:
-            # 2. Fetch Root Contents
-            contents_url = f"{api_base}/contents"
-            try:
-                res = await client.get(contents_url, headers=headers)
-                res.raise_for_status()
-                files = res.json()
-                
-                from backend.auth.dependencies import supabase
-                integ_res = supabase.table('integrations').select('user_id').eq('id', integration_id).single().execute()
-                user_id = str(integ_res.data['user_id'])
-                
-                indexed_count = 0
-                for file_info in files:
-                    # Filter for documentation/text files
-                    name = str(file_info.get("name", ""))
-                    if file_info.get("type") == "file" and (name.endswith(".md") or name.endswith(".txt")):
-                        # Fetch individual file content
-                        download_res = await client.get(file_info["url"], headers=headers)
-                        if download_res.status_code == 200:
-                            f_data = download_res.json()
-                            content_b64 = f_data.get("content", "")
-                            text = base64.b64decode(content_b64).decode("utf-8")
+            # 2. Identify Default Branch
+            repo_res = await client.get(api_base, headers=headers)
+            repo_res.raise_for_status()
+            default_branch = repo_res.json().get("default_branch", "main")
+            
+            # 3. Fetch Recursive Tree
+            tree_url = f"{api_base}/git/trees/{default_branch}?recursive=1"
+            tree_res = await client.get(tree_url, headers=headers)
+            tree_res.raise_for_status()
+            tree_data = tree_res.json()
+            
+            from backend.auth.dependencies import supabase
+            integ_res = supabase.table('integrations').select('user_id').eq('id', integration_id).single().execute()
+            user_id = str(integ_res.data['user_id'])
+            
+            indexed_count = 0
+            for item in tree_data.get("tree", []):
+                # Filter for documentation/text blobs
+                path = item.get("path", "")
+                if item.get("type") == "blob" and (path.endswith(".md") or path.endswith(".txt")):
+                    # 4. Fetch Blob Content
+                    blob_url = item.get("url")
+                    download_res = await client.get(blob_url, headers=headers)
+                    if download_res.status_code == 200:
+                        f_data = download_res.json()
+                        content_b64 = f_data.get("content", "")
+                        encoding = f_data.get("encoding", "")
+                        
+                        if encoding == "base64":
+                            try:
+                                # GitHub base64 can contain newlines
+                                text = base64.b64decode(content_b64.replace('\n', '')).decode("utf-8")
+                            except Exception:
+                                continue # Skip binary or malformed files
+                        else:
+                            text = content_b64 # Possibly already decoded or raw
                             
-                            await ingestion_service.process_text_content(
-                                text=text,
-                                filename=f"GitHub: {repo_full_name}/{name}",
-                                file_type="github",
-                                user_id=user_id,
-                                metadata={"github_repo": repo_full_name, "path": name}
-                            )
-                            indexed_count += 1
-                
-                return {
-                    "status": "success",
-                    "repo": repo_full_name,
-                    "pages_indexed": indexed_count,
-                    "message": f"Successfully indexed {indexed_count} files from the repository root.",
-                    "timestamp": datetime.now().isoformat()
-                }
-                
-            except Exception as e:
-                # Fallback to README if listing fails or returns error
-                raise Exception(f"Failed to extract repository content: {str(e)}")
+                        await ingestion_service.process_text_content(
+                            text=text,
+                            filename=f"GitHub: {repo_full_name}/{path}",
+                            file_type="github",
+                            user_id=user_id,
+                            metadata={"github_repo": repo_full_name, "path": path, "branch": default_branch}
+                        )
+                        indexed_count += 1
+            
+            return {
+                "status": "success",
+                "repo": repo_full_name,
+                "branch": default_branch,
+                "pages_indexed": indexed_count,
+                "message": f"Successfully indexed {indexed_count} files recursively from {default_branch}.",
+                "timestamp": datetime.now().isoformat()
+            }
 

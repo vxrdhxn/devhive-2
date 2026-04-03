@@ -87,26 +87,49 @@ async def get_documents(current_user: User = Depends(get_current_user)):
 @router.delete("/{document_id}")
 async def delete_document(document_id: str, current_user: User = Depends(get_current_user)):
     """
-    Universal Deletion: Any authenticated user can delete any document.
-    This enables a collaborative/shared workspace model.
+    Delete a document. 
+    Restricted to: Document Owner OR Admin/Manager.
     """
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase not configured")
 
+    # 1. Fetch document ownership and user role
     try:
-        print(f"DEBUG: UNIVERSAL DELETE REQUEST for {document_id} by user {current_user.id}")
+        # Fetch document
+        doc_res = await anyio.to_thread.run_sync(
+            lambda: supabase.table("documents").select("uploaded_by").eq("id", document_id).single().execute()
+        )
+        if not doc_res.data:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        doc_owner = doc_res.data.get("uploaded_by")
 
-        # Execute direct delete using service role key (bypasses RLS)
+        # Fetch user role
+        profile_res = await anyio.to_thread.run_sync(
+            lambda: supabase.table("profiles").select("role").eq("id", current_user.id).single().execute()
+        )
+        user_role = profile_res.data.get("role") if profile_res.data else "employee"
+
+        # 2. Enforce RBAC
+        is_owner = str(doc_owner) == str(current_user.id)
+        is_privileged = user_role in ["admin", "manager"]
+
+        if not (is_owner or is_privileged):
+            print(f"DEBUG: ACCESS DENIED for delete {document_id} by user {current_user.id} (Role: {user_role})")
+            raise HTTPException(
+                status_code=403, 
+                detail="Not authorized to delete this document. Ownership or Admin/Manager role required."
+            )
+
+        print(f"DEBUG: DELETE AUTHORIZED for {document_id} by user {current_user.id}")
+
+        # 3. Execute delete
         response = await anyio.to_thread.run_sync(
             lambda: supabase.table("documents").delete().eq("id", document_id).execute()
         )
         
         if not response.data or len(response.data) == 0:
-            print(f"DEBUG: Deletion failed/Document not found for {document_id}")
-            raise HTTPException(
-                status_code=404, 
-                detail="Document not found or already deleted"
-            )
+            raise HTTPException(status_code=404, detail="Document not found or already deleted")
             
         print(f"DEBUG: Successfully deleted document {document_id}")
     except Exception as e:

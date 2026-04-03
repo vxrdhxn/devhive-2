@@ -41,6 +41,8 @@ try:
     from backend.routers import search
     
     from backend.routers import integrations
+    
+    import backend.routers.analytics as analytics
 
     from backend.config import get_settings
     print("✅ [BOOT] Configuration loaded")
@@ -70,6 +72,7 @@ app.add_middleware(
 app.include_router(documents.router)
 app.include_router(search.router)
 app.include_router(integrations.router)
+app.include_router(analytics.router)
 
 @app.get("/")
 async def root():

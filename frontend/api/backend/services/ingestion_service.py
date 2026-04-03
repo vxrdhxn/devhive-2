@@ -106,6 +106,36 @@ class IngestionService:
             )
             embeddings = await embedding_service.batch_generate_embeddings(chunks)
             
+            # --- CONTENT DEDUPLICATION CHECK ---
+            # Using the first chunk's embedding to check for near-identical documents
+            if embeddings:
+                first_chunk_embedding = embeddings[0]
+                similarity_res = await anyio.to_thread.run_sync(
+                    lambda: supabase.rpc(
+                        'match_chunks', 
+                        {
+                            'query_embedding': first_chunk_embedding,
+                            'match_threshold': 0.95,
+                            'match_count': 1,
+                            'user_id': user_id
+                        }
+                    ).execute()
+                )
+                
+                if similarity_res.data and len(similarity_res.data) > 0:
+                    matched_doc_id = similarity_res.data[0].get('document_id')
+                    print(f"DEBUG: DUPLICATE DETECTED! Found match with document {matched_doc_id}")
+                    
+                    await anyio.to_thread.run_sync(
+                        lambda: supabase.table('documents').update({
+                            'status': 'duplicate',
+                            'metadata': {** (extra_metadata or {}), 'duplicate_of': matched_doc_id}
+                        }).eq('id', doc_id).execute()
+                    )
+                    
+                    raise ValueError(f"Content already exists in the knowledge base (matched document ID: {matched_doc_id})")
+            # -----------------------------------
+            
             # 5. Insert Chunks into Supabase
             await anyio.to_thread.run_sync(
                 lambda: supabase.table('documents').update({'status': 'storing in vector db'}).eq('id', doc_id).execute()

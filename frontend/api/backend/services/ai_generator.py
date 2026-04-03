@@ -40,8 +40,8 @@ class AIGenerator:
 
         ### TASK:
         Analyze the context chunks below and answer the user's question with maximum depth.
-        - **ONLY** if the user explicitly asks for a summary of ALL documents or an overview of the workspace, create a clear, categorized breakdown for EVERY file mentioned in the context.
-        - Otherwise, focus purely on answering the specific question using direct technical evidence from the context.
+        - **CRITICAL**: Unless the user explicitly asks for a "Summary of all files" or a "Workspace overview", DO NOT include any file list, document breakdown, or metadata table at the beginning of your response. 
+        - **START DIRECTLY** with the answer to the specific question. Focus 100% on answering the technical details.
         - If the user asks a technical question, explain the "how" and "why" not just the "what."
         - Use **Markdown tables** if you encounter data that is easier to compare side-by-side.
         - NEVER make up information. If it's not in the context, say it's missing from the knowledge base.
