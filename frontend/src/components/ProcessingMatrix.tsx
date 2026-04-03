@@ -23,7 +23,8 @@ export function ProcessingMatrix() {
     setDeletingId(id)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/documents/${id}`, {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "/api"
+      const res = await fetch(`${backendUrl}/documents/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session?.access_token}`

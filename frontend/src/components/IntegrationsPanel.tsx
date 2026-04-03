@@ -120,7 +120,7 @@ export function IntegrationsPanel() {
     setSyncingId(integrationId)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000"
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "/api"
       const response = await fetch(`${backendUrl}/integrations/${integrationId}/sync`, {
         method: 'POST',
         headers: {

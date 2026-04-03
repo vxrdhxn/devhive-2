@@ -46,7 +46,8 @@ export function SearchPanel() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/search/`, {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "/api"
+      const res = await fetch(`${backendUrl}/search/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -68,8 +69,12 @@ export function SearchPanel() {
       const data: SearchResponse = await res.json();
       setResults(data);
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || "An error occurred while communicating with the AI search engine.");
+      console.error("Search error details:", err);
+      if (err.name === "TypeError" && err.message === "Failed to fetch") {
+        setError("Backend Offline: Check Server or Network Connection.");
+      } else {
+        setError(err.message || "An error occurred while communicating with the AI search engine.");
+      }
     } finally {
       setSearching(false);
     }

@@ -21,13 +21,22 @@ class EmbeddingService:
             )
 
     async def generate_embedding(self, text: str) -> List[float]:
-        """Generate an embedding for a piece of text using HF API"""
+        """Generate an embedding for a piece of text using HF API with retries"""
         if not self._client:
             raise ValueError("Hugging Face client is not initialized")
             
-        embeddings = await self._client.feature_extraction(text)
-        # For a single string input, huggingface_hub returns a flat sequence (list or ndarray shape (D,))
-        return embeddings if isinstance(embeddings, list) else embeddings.tolist()
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                embeddings = await self._client.feature_extraction(text)
+                return embeddings if isinstance(embeddings, list) else embeddings.tolist()
+            except Exception as e:
+                error_str = str(e).lower()
+                if ("503" in error_str or "429" in error_str) and attempt < max_retries - 1:
+                    await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                    continue
+                print(f"ERROR: HuggingFace feature_extraction failed on attempt {attempt+1}: {e}")
+                raise e
 
     async def batch_generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Generate embeddings for a list of text chunks with robust retries"""
