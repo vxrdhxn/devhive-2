@@ -47,7 +47,7 @@ class Settings(BaseSettings):
         description="Groq API key for LLM inference"
     )
     groq_model: str = Field(
-        default="llama-3.3-70b-versatile",
+        default="llama-3.1-8b-instant",
         description="Groq model to use"
     )
     
