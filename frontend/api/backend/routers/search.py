@@ -25,7 +25,7 @@ class SearchResponse(BaseModel):
     chunks: List[Dict[str, Any]]
     confidence: Optional[float] = None
 
-@router.post("/", response_model=SearchResponse)
+@router.post("", response_model=SearchResponse)
 async def perform_search(
     request: SearchRequest,
     current_user: User = Depends(get_current_user)

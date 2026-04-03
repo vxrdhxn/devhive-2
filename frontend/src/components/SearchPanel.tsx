@@ -47,7 +47,7 @@ export function SearchPanel() {
       const { data: { session } } = await supabase.auth.getSession()
 
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "/api"
-      const res = await fetch(`${backendUrl}/search/`, {
+      const res = await fetch(`${backendUrl}/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
