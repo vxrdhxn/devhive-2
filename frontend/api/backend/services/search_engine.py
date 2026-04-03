@@ -16,19 +16,23 @@ class SearchEngine:
         if not supabase:
             raise ValueError("Supabase client is not initialized.")
             
-        # 1. Generate query embedding
+        # 1. Detect "Global" queries to increase search depth
+        # If user asks for a summary of everything, we need more than 5 chunks
+        is_global = any(word in query.lower() for word in ["summarize all", "all files", "everything", "all documents", "total overview"])
+        actual_top_k = 40 if is_global else top_k
+
+        # 2. Generate query embedding
         query_vector = await embedding_service.generate_embedding(query)
         
-        # 2. Perform similarity search using the match_chunks RPC
-        # The RPC is role-aware: Admin/Manager sees all, Employee sees public + own
+        # 3. Perform similarity search using the match_chunks RPC
         try:
             response = supabase.rpc(
                 'match_chunks',
                 {
                     'query_embedding': query_vector,
                     'match_threshold': min_similarity,
-                    'match_count': top_k,
-                    'requesting_user_id': user_id # Using clear parameter name for the new SQL function
+                    'match_count': actual_top_k,
+                    'requesting_user_id': user_id
                 }
             ).execute()
         except Exception as e:
@@ -41,10 +45,8 @@ class SearchEngine:
 
         results = response.data
         if results is None:
-            print("DEBUG: match_chunks RPC returned None data")
             return []
             
-        print(f"DEBUG: match_chunks RPC returned {len(results)} results")
         return [
             {
                 "id": str(r['chunk_id']),

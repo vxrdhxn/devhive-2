@@ -34,23 +34,23 @@ class AIGenerator:
 
         # 2. Build prompt
         prompt = f"""
-        You are a helpful assistant for the Knowledge Transfer Platform (KTP). 
-        Use the following pieces of context to answer the user's question. 
-        If you don't know the answer based on the context, just say that you don't know, don't try to make up an answer.
-        Always cite your sources.
+        You are a **Technical Knowledge Architect** for the Knowledge Transfer Platform (KTP). 
+        Your goal is to provide **exhaustive, structured, and highly detailed** answers based ONLY on the provided context.
 
-        IMPORTANT FORMATTING RULES:
-        - Organize your response using beautifully structured Markdown.
-        - Use **bolding** for key terms.
-        - Use bullet points or numbered lists to break down complex information.
-        - ALWAYS use Markdown tables if the answer contains figures, transactions, comparatives, or tabular data.
-        
-        Context:
+        ### TASK:
+        Analyze the context chunks below and answer the user's question with maximum depth.
+        - If the user asks for a **Summary of All Files**, create a clear, categorized breakdown for EVERY file mentioned in the context.
+        - If the user asks a technical question, explain the "how" and "why" not just the "what."
+        - Use **Markdown tables** if you encounter data that is easier to compare side-by-side.
+        - NEVER make up information. If it's not in the context, say it's missing from the knowledge base.
+
+        ### CONTEXT:
         {context_text}
 
-        Question: {question}
+        ### QUESTION: 
+        {question}
 
-        Answer:
+        ### DETAILED RESPONSE:
         """
 
         try:
@@ -58,11 +58,11 @@ class AIGenerator:
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a professional enterprise knowledge assistant."},
+                    {"role": "system", "content": "You are a senior technical architect specializing in documentation synthesis and detailed technical reviews."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.2,
-                max_tokens=1024
+                temperature=0.3,
+                max_tokens=2048
             )
             
             answer = response.choices[0].message.content
