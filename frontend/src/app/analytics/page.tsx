@@ -67,12 +67,16 @@ export default function AnalyticsPage() {
   }, [])
 
   if (loading) return (
-    <div className="flex h-screen items-center justify-center bg-background">
-      <motion.div 
-        animate={{ rotate: 360 }} 
-        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-        className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full"
-      />
+    <div className="flex flex-col min-h-screen bg-background text-foreground transition-colors duration-300">
+      <CommandMenu />
+      <Navbar />
+      <div className="flex-1 flex items-center justify-center">
+        <motion.div 
+          animate={{ rotate: 360 }} 
+          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+          className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full"
+        />
+      </div>
     </div>
   )
 
