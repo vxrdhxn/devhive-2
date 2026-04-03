@@ -11,6 +11,8 @@ import {
   ArrowUpRight, ArrowDownRight, Zap, Target
 } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
+import { Navbar } from "@/components/Navbar"
+import { CommandMenu } from "@/components/CommandMenu"
 
 export default function AnalyticsPage() {
   const [stats, setStats] = useState<any>(null)
@@ -75,36 +77,40 @@ export default function AnalyticsPage() {
   )
 
   if (error) return (
-    <div className="flex h-screen items-center justify-center bg-background text-foreground p-4 text-center">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="max-w-md bg-card border border-border rounded-3xl p-10 shadow-2xl"
-      >
-        <div className="h-16 w-16 bg-destructive/10 text-destructive rounded-2xl flex items-center justify-center mx-auto mb-6">
-          <Activity className="h-8 w-8" />
-        </div>
-        <h1 className="text-2xl font-black tracking-tighter mb-2">Access Restricted</h1>
-        <p className="text-muted-foreground font-medium mb-8 leading-relaxed">
-          {error.includes("Access denied") 
-            ? "Your current role does not have permission to view system-wide analytics. This feature is restricted to Admin and Manager accounts." 
-            : `System Error: ${error}`}
-        </p>
-        <div className="flex flex-col gap-3">
-          <button 
-            onClick={() => window.location.reload()}
-            className="w-full py-3 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-all"
-          >
-            Try Again
-          </button>
-          <button 
-            onClick={() => window.location.href = '/'}
-            className="w-full py-3 bg-muted text-muted-foreground rounded-xl font-bold hover:bg-muted/80 transition-all"
-          >
-            Back to Workspace
-          </button>
-        </div>
-      </motion.div>
+    <div className="flex flex-col min-h-screen bg-background text-foreground transition-colors duration-300">
+      <CommandMenu />
+      <Navbar />
+      <div className="flex-1 flex items-center justify-center p-4 text-center">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md bg-card border border-border rounded-3xl p-10 shadow-2xl"
+        >
+          <div className="h-16 w-16 bg-destructive/10 text-destructive rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Activity className="h-8 w-8" />
+          </div>
+          <h1 className="text-2xl font-black tracking-tighter mb-2">Access Restricted</h1>
+          <p className="text-muted-foreground font-medium mb-8 leading-relaxed">
+            {error.includes("Access denied") 
+              ? "Your current role does not have permission to view system-wide analytics. This feature is restricted to Admin and Manager accounts." 
+              : `System Error: ${error}`}
+          </p>
+          <div className="flex flex-col gap-3">
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full py-3 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-all"
+            >
+              Try Again
+            </button>
+            <button 
+              onClick={() => window.location.href = '/'}
+              className="w-full py-3 bg-muted text-muted-foreground rounded-xl font-bold hover:bg-muted/80 transition-all"
+            >
+              Back to Workspace
+            </button>
+          </div>
+        </motion.div>
+      </div>
     </div>
   )
 
@@ -114,8 +120,12 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-8 md:p-12">
-      <header className="mb-12">
+    <div className="flex flex-col min-h-screen bg-background text-foreground transition-colors duration-300">
+      <CommandMenu />
+      <Navbar />
+
+      <main className="flex-1 p-8 md:p-12 w-full space-y-12 pb-32">
+        <header className="mb-12">
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -280,7 +290,8 @@ export default function AnalyticsPage() {
           </div>
         </motion.div>
       </div>
-    </div>
+    </main>
+  </div>
   )
 }
 
