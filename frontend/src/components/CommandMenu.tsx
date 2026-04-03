@@ -78,6 +78,16 @@ export function CommandMenu() {
                       <Database className="mr-3 h-4 w-4 text-emerald-500 shrink-0" />
                       Browse pgvector Database
                     </Command.Item>
+                    <Command.Item 
+                      onSelect={() => {
+                        setOpen(false)
+                        window.location.href = '/analytics'
+                      }}
+                      className="flex items-center px-4 py-3 rounded-xl hover:bg-slate-100 cursor-pointer text-sm text-slate-700 font-medium aria-selected:bg-indigo-50 aria-selected:text-indigo-700 transition"
+                    >
+                      <Zap className="mr-3 h-4 w-4 text-indigo-500 shrink-0" />
+                      View System Analytics
+                    </Command.Item>
                   </Command.Group>
 
                   <Command.Separator className="h-px bg-slate-100 mx-2 my-1" />

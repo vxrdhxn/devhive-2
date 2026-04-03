@@ -59,16 +59,28 @@ export function Navbar() {
               Workspace
             </Link>
             {!loading && (role === 'admin' || role === 'manager') && (
-              <Link 
-                href="/overview" 
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  pathname === "/overview" 
-                    ? "bg-foreground text-background shadow-sm" 
-                    : "hover:bg-muted/10 text-muted-foreground"
-                }`}
-              >
-                Overview
-              </Link>
+              <>
+                <Link 
+                  href="/overview" 
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    pathname === "/overview" 
+                      ? "bg-foreground text-background shadow-sm" 
+                      : "hover:bg-muted/10 text-muted-foreground"
+                  }`}
+                >
+                  Overview
+                </Link>
+                <Link 
+                  href="/analytics" 
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                    pathname === "/analytics" 
+                      ? "bg-foreground text-background shadow-sm" 
+                      : "hover:bg-muted/10 text-muted-foreground"
+                  }`}
+                >
+                  Analytics
+                </Link>
+              </>
             )}
           </div>
         </div>
