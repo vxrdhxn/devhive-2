@@ -117,7 +117,7 @@ class IngestionService:
                             'query_embedding': first_chunk_embedding,
                             'match_threshold': 0.95,
                             'match_count': 1,
-                            'user_id': user_id
+                            'requesting_user_id': user_id
                         }
                     ).execute()
                 )
