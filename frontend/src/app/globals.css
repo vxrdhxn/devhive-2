@@ -38,11 +38,42 @@ body {
   border-color: var(--border);
 }
 
-/* Hide scrollbars but keep functionality */
-* {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;     /* Firefox */
+/* Custom scrollbar styling for a premium look */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
-*::-webkit-scrollbar {
-  display: none;             /* Chrome, Safari and Opera */
+
+::-webkit-scrollbar-track {
+  background: transparent;
 }
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 10px;
+  opacity: 0.5;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground);
+}
+
+/* Specific class for components that need a subtle scrollbar */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.2);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.4);
+}
+

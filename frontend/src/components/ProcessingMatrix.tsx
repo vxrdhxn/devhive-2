@@ -74,7 +74,7 @@ export function ProcessingMatrix() {
       </div>
 
       {/* Terminal Body */}
-      <div className="space-y-4 font-mono text-[10px] min-h-[160px] max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
+      <div className="space-y-4 font-mono text-[10px] min-h-[160px] max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
         {loading && docs.length === 0 ? (
           <div className="text-muted animate-pulse font-bold uppercase tracking-widest">Awaiting Knowledge Stream...</div>
         ) : (
