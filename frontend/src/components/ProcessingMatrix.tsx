@@ -30,10 +30,14 @@ export function ProcessingMatrix() {
           Authorization: `Bearer ${session?.access_token}`
         }
       })
-      if (!res.ok) throw new Error("Delete failed")
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.detail || "Delete operation failed")
+      }
       setDocs(prev => prev.filter(d => d.id !== id))
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
+      alert(`Deletion Failed: ${err.message}`)
     } finally {
       setDeletingId(null)
     }

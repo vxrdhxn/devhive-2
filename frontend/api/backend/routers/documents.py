@@ -104,7 +104,13 @@ async def delete_document(document_id: str, current_user: User = Depends(get_cur
             query = query.eq("uploaded_by", current_user.id)
             
         response = await anyio.to_thread.run_sync(lambda: query.execute())
+        
+        # Check if anything was actually deleted (Response data contains the deleted row)
+        if not response.data:
+            raise HTTPException(status_code=403, detail="Not authorized or document not found")
+            
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
+        if isinstance(e, HTTPException): raise e
+        raise HTTPException(status_code=500, detail=f"Database Delete Failed: {str(e)}")
         
     return {"message": "Document deleted successfully"}
