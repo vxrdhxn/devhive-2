@@ -65,10 +65,11 @@ async def sync_integration(
 
 @router.get("/")
 async def get_integrations(current_user: User = Depends(get_current_user)):
-    """List all integrations for the current user."""
+    """List all integrations (shared workspace)."""
     if not supabase:
         return []
-    res = supabase.table("integrations").select("*").eq("user_id", current_user.id).execute()
+    # All users can see active bridges in the shared workspace
+    res = supabase.table("integrations").select("*").execute()
     return res.data or []
 
 @router.delete("/{integration_id}")
@@ -83,7 +84,19 @@ async def delete_integration(
         raise HTTPException(status_code=500, detail="Supabase client not initialized")
         
     try:
-        response = supabase.table("integrations").delete().eq("id", integration_id).eq("user_id", current_user.id).execute()
+        # Check if user is the creator or an Admin/Manager
+        res = supabase.table("integrations").select("user_id").eq("id", integration_id).single().execute()
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Integration not found")
+        
+        is_creator = res.data["user_id"] == current_user.id
+        is_admin = current_user.role in ["admin", "manager"]
+
+        if not (is_creator or is_admin):
+            raise HTTPException(status_code=403, detail="Not authorized to delete this integration")
+
+        response = supabase.table("integrations").delete().eq("id", integration_id).execute()
         return {"message": "Integration removed successfully"}
     except Exception as e:
+        if isinstance(e, HTTPException): raise e
         raise HTTPException(status_code=500, detail=f"Failed to remove integration: {str(e)}")

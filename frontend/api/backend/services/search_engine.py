@@ -47,7 +47,7 @@ class SearchEngine:
         print(f"DEBUG: match_chunks RPC returned {len(results)} results")
         return [
             {
-                "id": str(r['id']),
+                "id": str(r['chunk_id']),
                 "text": r['content'],
                 "document_id": str(r['document_id']),
                 "similarity": float(r['similarity'])
