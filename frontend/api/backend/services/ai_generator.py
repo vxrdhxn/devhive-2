@@ -7,10 +7,11 @@ from backend.config import get_settings
 settings = get_settings()
 
 class AIGenerator:
-    """Service for generating context-aware answers using Groq LLaMA models"""
+    """Service for generating context-aware answers using Groq LLaMA models natively async"""
     
     def __init__(self):
-        self.client = groq.Groq(api_key=settings.groq_api_key) if settings.groq_api_key else None
+        # Use native AsyncGroq for seamless FastAPI integration without blocking threads
+        self.client = groq.AsyncGroq(api_key=settings.groq_api_key) if settings.groq_api_key else None
         self.model = settings.groq_model
 
     async def generate_answer(
@@ -52,26 +53,18 @@ class AIGenerator:
         Answer:
         """
 
-        def _sync_generate():
-            try:
-                # 3. Call Groq API
-                client = self.client  # Local variable for type narrowing
-                assert client is not None, "Groq client must be initialized"
-                response = client.chat.completions.create(
-                    model=self.model,
-                    messages=[
-                        {"role": "system", "content": "You are a professional enterprise knowledge assistant."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0.2,
-                    max_tokens=1024
-                )
-                return response
-            except Exception as e:
-                raise e
-
         try:
-            response = await anyio.to_thread.run_sync(_sync_generate)
+            # 3. Call Async Groq API natively
+            response = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": "You are a professional enterprise knowledge assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.2,
+                max_tokens=1024
+            )
+            
             answer = response.choices[0].message.content
             
             # 4. Extract unique sources
@@ -84,6 +77,9 @@ class AIGenerator:
             }
             
         except Exception as e:
+            import traceback
+            trace_str = traceback.format_exc()
+            print(f"Error generating answer: {str(e)}\n{trace_str}")
             return {
                 "answer": f"Error generating answer: {str(e)}",
                 "sources": []
