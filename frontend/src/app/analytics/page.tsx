@@ -221,7 +221,7 @@ export default function AnalyticsPage() {
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 10, fontWeight: 700, fill: 'var(--muted-foreground)' }}
+                  tick={{ fontSize: 10, fontWeight: 700, fill: 'var(--foreground)' }}
                 />
                 <Tooltip 
                   contentStyle={{ 
