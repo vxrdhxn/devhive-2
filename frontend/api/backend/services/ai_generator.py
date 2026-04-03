@@ -52,7 +52,7 @@ class AIGenerator:
         Answer:
         """
 
-        async def _sync_generate():
+        def _sync_generate():
             try:
                 # 3. Call Groq API
                 client = self.client  # Local variable for type narrowing
