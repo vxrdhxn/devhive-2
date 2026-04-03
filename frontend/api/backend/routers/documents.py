@@ -87,37 +87,25 @@ async def get_documents(current_user: User = Depends(get_current_user)):
 @router.delete("/{document_id}")
 async def delete_document(document_id: str, current_user: User = Depends(get_current_user)):
     """
-    Delete a document and its associated chunks. 
-    Admin/Manager can delete anything, Users can delete their own.
+    Universal Deletion: Any authenticated user can delete any document.
+    This enables a collaborative/shared workspace model.
     """
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase not configured")
 
     try:
-        # 1. Hardened Role Check
-        profile_res = await anyio.to_thread.run_sync(
-            lambda: supabase.table("profiles").select("role").eq("id", current_user.id).single().execute()
-        )
-        user_role = profile_res.data.get("role") if profile_res.data else "employee"
-        
-        print(f"DEBUG: DELETE REQUEST for {document_id} by user {current_user.id} ({user_role})")
+        print(f"DEBUG: UNIVERSAL DELETE REQUEST for {document_id} by user {current_user.id}")
 
-        # 2. Build the Delete Query
-        query = supabase.table("documents").delete().eq("id", document_id)
-        
-        # If not an admin/manager, they MUST be the uploader
-        if user_role not in ["admin", "manager"]:
-            query = query.eq("uploaded_by", current_user.id)
-            
-        # 3. Execute with explicit data return to confirm rows affected
-        # In PostgREST, delete doesn't always return data unless specified or checking count
-        response = await anyio.to_thread.run_sync(lambda: query.execute())
+        # Execute direct delete using service role key (bypasses RLS)
+        response = await anyio.to_thread.run_sync(
+            lambda: supabase.table("documents").delete().eq("id", document_id).execute()
+        )
         
         if not response.data or len(response.data) == 0:
-            print(f"DEBUG: Deletion failed or 0 rows affected for {document_id}")
+            print(f"DEBUG: Deletion failed/Document not found for {document_id}")
             raise HTTPException(
-                status_code=403, 
-                detail="Not authorized to delete this document or it does not exist"
+                status_code=404, 
+                detail="Document not found or already deleted"
             )
             
         print(f"DEBUG: Successfully deleted document {document_id}")
