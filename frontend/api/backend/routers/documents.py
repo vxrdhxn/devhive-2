@@ -18,6 +18,7 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
+    is_private: bool = False,
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -44,7 +45,8 @@ async def upload_document(
             file_content=content,
             filename=file.filename,
             file_type=file.content_type or "text/plain",
-            user_id=current_user.id
+            user_id=current_user.id,
+            is_private=is_private
         )
         print(f"DEBUG: Ingestion SUCCEEDED for {file.filename}")
     except Exception as e:
@@ -57,15 +59,28 @@ async def upload_document(
 @router.get("/")
 async def get_documents(current_user: User = Depends(get_current_user)):
     """
-    List all documents uploaded by the current user.
+    List all documents. Scoped by role:
+    - Admin/Manager: All documents
+    - Employee: Only public documents + their own uploads
     """
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase not configured")
 
-    # The RLS policies will automatically scope this to the current user's documents
-    # However we explicitly filter by uploaded_by for extra safety if service-role is used
+    # 1. Fetch user role
+    profile_res = await anyio.to_thread.run_sync(
+        lambda: supabase.table("profiles").select("role").eq("id", current_user.id).single().execute()
+    )
+    user_role = profile_res.data.get("role") if profile_res.data else "employee"
+
+    # 2. Build Query
+    query = supabase.table("documents").select("*")
+    
+    if user_role not in ["admin", "manager"]:
+        # Show public documents OR documents they personally uploaded
+        query = query.or_(f"is_private.eq.false,uploaded_by.eq.{current_user.id}")
+    
     response = await anyio.to_thread.run_sync(
-        lambda: supabase.table("documents").select("*").eq("uploaded_by", current_user.id).order('created_at', desc=True).execute()
+        lambda: query.order('created_at', desc=True).execute()
     )
     return response.data
 
@@ -78,9 +93,17 @@ async def delete_document(document_id: str, current_user: User = Depends(get_cur
         raise HTTPException(status_code=500, detail="Supabase not configured")
 
     try:
-        response = await anyio.to_thread.run_sync(
-            lambda: supabase.table("documents").delete().eq("id", document_id).eq("uploaded_by", current_user.id).execute()
+        # Check permissions: Admin/Manager can delete anything, users can delete their own
+        profile_res = await anyio.to_thread.run_sync(
+            lambda: supabase.table("profiles").select("role").eq("id", current_user.id).single().execute()
         )
+        user_role = profile_res.data.get("role") if profile_res.data else "employee"
+        
+        query = supabase.table("documents").delete().eq("id", document_id)
+        if user_role not in ["admin", "manager"]:
+            query = query.eq("uploaded_by", current_user.id)
+            
+        response = await anyio.to_thread.run_sync(lambda: query.execute())
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
         

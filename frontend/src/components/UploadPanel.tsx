@@ -9,6 +9,7 @@ export function UploadPanel() {
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [status, setStatus] = useState<"idle" | "success" | "error" | "offline">("idle")
+  const [isPrivate, setIsPrivate] = useState(false)
   const supabase = createClient()
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,9 +29,11 @@ export function UploadPanel() {
       
       const formData = new FormData()
       formData.append("file", file)
+      formData.append("is_private", isPrivate.toString())
 
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "/api"
-      const res = await fetch(`${backendUrl}/documents/upload`, {
+      // Note: We use query params for boolean/simple flags to match FastAPI's easier handling of non-file fields in some setups
+      const res = await fetch(`${backendUrl}/documents/upload?is_private=${isPrivate}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session?.access_token}`
@@ -45,6 +48,7 @@ export function UploadPanel() {
       
       setStatus("success")
       setFile(null)
+      setIsPrivate(false)
     } catch (err: any) {
       console.error("Upload error details:", err)
       if (err.name === "TypeError" && err.message === "Failed to fetch") {
@@ -60,9 +64,11 @@ export function UploadPanel() {
 
   return (
     <div className="p-8 bg-card border-b border-border">
-      <h2 className="text-sm font-bold mb-6 flex items-center gap-2 uppercase tracking-widest text-muted">
-        <Upload className="h-4 w-4" />
-        Ingestion Layer
+      <h2 className="text-sm font-bold mb-6 flex items-center justify-between uppercase tracking-widest text-muted">
+        <div className="flex items-center gap-2">
+          <Upload className="h-4 w-4" />
+          Ingestion Layer
+        </div>
       </h2>
       
       <motion.label 
@@ -111,6 +117,27 @@ export function UploadPanel() {
           )}
         </AnimatePresence>
       </motion.label>
+
+      {/* Privacy Toggle */}
+      <div className="mt-6 flex items-center justify-between p-4 bg-muted/5 rounded-xl border border-border">
+        <div className="flex flex-col">
+          <span className="text-[10px] font-black uppercase tracking-widest mb-1">Visibility Level</span>
+          <span className="text-[9px] text-muted font-medium">Managers/Admins only if enabled</span>
+        </div>
+        <button
+          onClick={() => setIsPrivate(!isPrivate)}
+          className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${
+            isPrivate ? "bg-foreground" : "bg-muted/20"
+          }`}
+        >
+          <span
+            className={`inline-block h-3 w-3 transform rounded-full bg-background transition-transform ${
+              isPrivate ? "translate-x-6" : "translate-x-1"
+            }`}
+          />
+        </button>
+      </div>
+
 
       <AnimatePresence>
         {file && (

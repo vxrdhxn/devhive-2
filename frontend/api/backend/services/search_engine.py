@@ -20,6 +20,7 @@ class SearchEngine:
         query_vector = await embedding_service.generate_embedding(query)
         
         # 2. Perform similarity search using the match_chunks RPC
+        # The RPC is role-aware: Admin/Manager sees all, Employee sees public + own
         try:
             response = supabase.rpc(
                 'match_chunks',
@@ -27,7 +28,7 @@ class SearchEngine:
                     'query_embedding': query_vector,
                     'match_threshold': min_similarity,
                     'match_count': top_k,
-                    'user_id': user_id
+                    'requesting_user_id': user_id # Using clear parameter name for the new SQL function
                 }
             ).execute()
         except Exception as e:

@@ -12,7 +12,8 @@ class IngestionService:
         file_content: bytes, 
         filename: str, 
         file_type: str,
-        user_id: str
+        user_id: str,
+        is_private: bool = False
     ) -> Dict[str, Any]:
         """Process a single document from raw bytes to chunks stored in Supabase pgvector."""
         return await self._process_and_store(
@@ -20,7 +21,8 @@ class IngestionService:
             filename=filename,
             file_type=file_type,
             user_id=user_id,
-            is_bytes=True
+            is_bytes=True,
+            is_private=is_private
         )
 
     async def process_text_content(
@@ -29,7 +31,8 @@ class IngestionService:
         filename: str,
         file_type: str,
         user_id: str,
-        metadata: Dict[str, Any] = None
+        metadata: Dict[str, Any] = None,
+        is_private: bool = False
     ) -> Dict[str, Any]:
         """Process raw text content (e.g. from integrations) to chunks stored in Supabase."""
         return await self._process_and_store(
@@ -38,7 +41,8 @@ class IngestionService:
             file_type=file_type,
             user_id=user_id,
             is_bytes=False,
-            extra_metadata=metadata or {}
+            extra_metadata=metadata or {},
+            is_private=is_private
         )
 
     async def _process_and_store(
@@ -48,7 +52,8 @@ class IngestionService:
         file_type: str,
         user_id: str,
         is_bytes: bool = True,
-        extra_metadata: Dict[str, Any] = None
+        extra_metadata: Dict[str, Any] = None,
+        is_private: bool = False
     ) -> Dict[str, Any]:
         """Core logic for indexing content."""
         if not supabase:
@@ -60,6 +65,7 @@ class IngestionService:
             'file_type': file_type,
             'uploaded_by': user_id,
             'status': 'processing',
+            'is_private': is_private,
             'metadata': extra_metadata or {}
         }
         doc_response = await anyio.to_thread.run_sync(
