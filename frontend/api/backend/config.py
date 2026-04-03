@@ -80,7 +80,7 @@ try:
     
     if missing:
         print(f"\n[!] WARNING: The following required environment variables are MISSING: {', '.join(missing)}")
-        print("[!] The application may fail to function correctly until these are set in Render/Vercel.\n")
+        print("[!] The application may fail to function correctly until these are set in Vercel.\n")
 except Exception as e:
     print(f"\n[!] ERROR: Failed to load settings: {e}")
     # Still create a partial settings object to avoid crashing the whole import

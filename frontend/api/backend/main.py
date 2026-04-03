@@ -3,8 +3,6 @@ import os
 import traceback
 
 # 0. Startup Checkpoint & Environment Setup
-# Force unbuffered output for Render logs
-os.environ["PYTHONUNBUFFERED"] = "1"
 os.environ["PYTHONPATH"] = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 print("\n" + "="*50)
@@ -31,7 +29,7 @@ try:
         from gotrue.types import User
     print("✅ [BOOT] Auth dependencies loaded")
 
-    # 2. Set Model Cache Environment Variables (Crucial for Render persistence)
+    # 2. Embeddings setup
     # Cache no longer needed since we use HuggingFace inference API
     print("✅ [BOOT] Model cache not required for API-based embeddings")
 

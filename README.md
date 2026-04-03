@@ -69,7 +69,7 @@ GROQ_MODEL=llama-3.1-8b-instant
 HUGGINGFACE_API_KEY=hf_...
 
 # --- Platform Settings ---
-NEXT_PUBLIC_BACKEND_URL=https://your-backend.render.com
+NEXT_PUBLIC_BACKEND_URL=https://your-project.vercel.app/api
 ```
 
 ### **3. Backend Setup**
@@ -88,12 +88,8 @@ npm run dev
 
 ## 🚀 Deployment Strategy
 
-### **Frontend (Vercel)**
-DevHive is optimized for Vercel's edge network. The `vercel.json` automatically handles rewrites to the FastAPI server.
-
-### **Backend (Render)**
-Deploy the backend as a Web Service on Render using the following build command:
-`pip install -r requirements.txt` and start command: `python -m uvicorn frontend.api.index:app --host 0.0.0.0 --port $PORT`
+### **Frontend & Backend (Vercel)**
+DevHive is optimized for the Vercel edge network. The entire application (Next.js frontend and FastAPI backend) can be deployed directly to Vercel for a seamless, unified experience.
 
 ---
 
