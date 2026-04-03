@@ -41,12 +41,17 @@ export default async function OverviewDashboard() {
     .order('created_at', { ascending: false })
     .limit(10)
     
-  // Fetch integration history with uploader info
+  // Fetch integration history with uploader info (Shared workspace)
   const { data: integrations } = await supabase
     .from('integrations')
-    .select('*, profiles!user_id(email)')
+    .select('*, profiles!inner(email)') // Using !inner for required profiles, or remove !inner for fallback
     .order('created_at', { ascending: false })
     .limit(8)
+    
+  // Fallback count if the join filters out unlinked profiles
+  const { count: integrationsCount } = await supabase
+    .from('integrations')
+    .select('*', { count: 'exact', head: true })
 
   // Fetch all profiles for Member Management
   const { data: allProfiles } = await supabase
@@ -83,7 +88,7 @@ export default async function OverviewDashboard() {
           {[
             { label: 'Total Documents', val: documentCount || 0, icon: FileText, color: 'text-foreground' },
             { label: 'Vector Embeddings', val: chunkCount || 0, icon: Database, color: 'text-foreground' },
-            { label: 'Active Connectors', val: integrations?.length || 0, icon: Server, color: 'text-foreground' },
+            { label: 'Active Connectors', val: integrationsCount || 0, icon: Server, color: 'text-foreground' },
             { label: 'System Uptime', val: '99.99%', icon: Activity, color: 'text-emerald-500' }
           ].map((kpi, i) => (
             <MotionWrapper key={kpi.label} delay={0.2 + (i * 0.05)}>
