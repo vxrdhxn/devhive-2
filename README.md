@@ -1,85 +1,107 @@
-# 🚀 Knowledge Transfer Platform (KTP) 
+# 🛰️ DevHive: Enterprise Knowledge Discovery & RAG Platform
 
-### **Enterprise-Grade AI Knowledge Management & Discovery**
+### **The Neural Engine for High-Performance Knowledge Retrieval and Synthesis**
 
-KTP is a high-performance **Retrieval-Augmented Generation (RAG)** platform designed for organizations to centralize, search, and synthesize disparate knowledge. It transforms static documents (PDFs, PPTXs, CSVs, etc.) into a live, interactive "Neural Library" that answers complex technical questions with maximum depth and precision.
-
----
-
-## 🏛️ System Architecture
-
-KTP is built on a modern, asynchronous stack designed for low-latency AI inference and robust data integrity:
-
-*   **Frontend**: Next.js 15 (App Router) + Tailwind CSS + Framer Motion. 
-*   **Backend**: FastAPI (Python 3.13) with native `AsyncGroq` integration.
-*   **Vector Engine**: Supabase (PostgreSQL) + `pgvector` for high-dimensional similarity search.
-*   **AI Synthesis**: Groq Llama 3.1 8B (providing 10x higher rate limits and speed than 70B models).
+**DevHive** is an advanced **Retrieval-Augmented Generation (RAG)** platform designed to transform static data into a high-speed, interactive intelligence hub. Engineered for enterprise-scale knowledge management, it enables teams to centralize documentation across multiple formats and platforms, delivering precise, context-aware answers in seconds.
 
 ---
 
-## 🧠 Core Features
+## 🏗️ Technical Architecture
 
-### 1. **Dynamic Ingestion Matrix (V2.0)**
-*   **Multi-Format Support**: Native extraction for PDF, DOCX, XLSX, CSV, MD, and more.
-*   **Auto-Chunking**: Splits documents into ~1000 character segments with overlap to maintain context.
-*   **Live Status Monitoring**: Track every document from staging to full vector indexing in real-time.
+DevHive uses a decoupled, high-concurrency architecture optimized for sub-second vector retrieval and AI inference:
 
-### 2. **Intelligent Semantic Search**
-*   **Beyond Keywords**: Uses deep-learning embeddings (`BAAI/bge-small-en-v1.5`) to understand *meaning*, not just words.
-*   **Smart Context Window**: Automatically expands search breadth (Top-K) for "Global Summary" requests (Summarize everything).
-*   **Expert Synthesis**: Answers questions with multi-paragraph technical detail, tables, and categorized file breakdowns.
-
-### 3. **Shared Workspace & Active Bridges**
-*   **Collaborative Library**: A "Shared Workspace" model where team members can jointly manage and clean up the knowledge base.
-*   **Universal Deletion**: Any authenticated user can help "prune" the matrix, with automatic cleanup of AI chunks (CASCADE).
-*   **Active Bridges**: Seamless connectivity logs for external platforms like GitHub and Notion.
+*   **Frontend**: Next.js 15 (App Router) • TypeScript • Framer Motion (Premium UI/UX) • Recharts (Neural Analytics).
+*   **Backend**: FastAPI (Python 3.13) • AnyIO (Asynchronous Concurrency) • Pydantic V2 (Validation).
+*   **Vector Database**: Supabase (PostgreSQL) • `pgvector` • HNSW indexing for O(log n) similarity search.
+*   **AI Stack**: 
+    *   **Embeddings**: `BAAI/bge-small-en-v1.5` via HuggingFace Inference API.
+    *   **Inference**: Groq Llama 3.1 8B (providing 450+ tokens/sec for rapid synthesis).
 
 ---
 
-## 🛠️ Technical Implementation
+## 🧠 Enterprise Features
 
-### **The RAG Pipeline**
-1.  **Ingestion**: `IngestionService` extracts text and generates high-dimensional vectors.
-2.  **Storage**: Vectors are stored in Supabase with metadata (filename, owner, privacy status).
-3.  **Retrieval**: `SearchEngine` executes a Postgres RPC (`match_chunks`) to find the most relevant context.
-4.  **Synthesis**: `AIGenerator` constructs a "Strict Answer Mode" prompt to generate precise documentation reviews.
+### 1. **Neural Analytics Dashboard**
+A mission-control center for administrators to monitor system performance:
+*   **Query Velocity**: Real-time tracking of search patterns over a 30-day timeline.
+*   **System Confidence**: Continuous monitoring of AI synthesis quality scores.
+*   **Active Intelligence**: Tracking of top intent patterns and most-searched technical terms.
 
-### **Role-Based Access (Shared-First)**
-*   **Profiles**: Every user has an auto-generated profile (`admin`, `manager`, `employee`).
-*   **Visibility**: "Private" documents stay visible only to creator/admins; "Public" documents are available to the entire team.
+### 2. **Recursive Cloud Adapters**
+Deep integration with version control and collaboration tools:
+*   **Recursive GitHub Sync**: Full-tree indexing of repositories, including nested directories and documentation nodes.
+*   **Bridge Management**: Centralized hub for managing external API connectors (Notion, Jira, GitHub).
+
+### 3. **Smart Ingestion Pipeline (V2.1)**
+A robust multi-stage pipeline for document processing:
+*   **Content Deduplication**: Automatic similarity checks (0.95 threshold) to prevent redundant knowledge indexing.
+*   **Global Format Support**: Native parsing for `PDF`, `DOCX`, `PPTX`, `XLSX`, `CSV`, `RTF`, `TXT`, and `MD`.
+*   **Background Processing**: Heavy text extraction and embedding generation are offloaded to background threads to ensure zero-latency UI interaction.
+
+### 4. **Granular RBAC System**
+Secure, role-based access control protecting enterprise data:
+*   **Admin**: Full system visibility, analytics access, and global document management.
+*   **Manager**: Integration management and document synchronization rights.
+*   **Employee**: Workspace access and private document management.
 
 ---
 
-## 🏁 Getting Started
+## 🛠️ Installation & Setup
 
-### **Environment Setup**
-Create a `.env` file in the root with the following variables:
+### **1. Prerequisites**
+*   Python 3.13+
+*   Node.js 20+
+*   Supabase Project (with PGVector enabled)
+
+### **2. Environment Configuration**
+Create a `.env` file in the root directory:
 
 ```env
-# Supabase
+# --- Supabase Configuration ---
+NEXT_PUBLIC_SUPABASE_URL=your_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_URL=your_project_url
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-DATABASE_URL=postgresql://postgres:[password]@db...
 
-# AI Services
+# --- AI Intelligence ---
 GROQ_API_KEY=gsk_...
 GROQ_MODEL=llama-3.1-8b-instant
-
-# Embeddings
 HUGGINGFACE_API_KEY=hf_...
+
+# --- Platform Settings ---
+NEXT_PUBLIC_BACKEND_URL=https://your-backend.render.com
 ```
 
-### **Deployment**
-*   **Frontend**: Deploy to **Vercel** (connect the repo and add variables).
-*   **Backend**: Deploy to **Render** (use the Python 3.13 runtime).
+### **3. Backend Setup**
+```powershell
+pip install -r requirements.txt
+python -m uvicorn frontend.api.index:app --reload --port 8000
+```
+
+### **4. Frontend Setup**
+```powershell
+npm install
+npm run dev
+```
 
 ---
 
-## 📂 Key Links
-- **[Deployment Guide](./DEPLOYMENT_GUIDE.md)**: Full step-by-step setup walkthrough.
-- **[Database Logic](./frontend/api/backend/supabase/SUPABASE_SETUP.sql)**: Core schema and PGVector functions.
-- **[Backend Config](./frontend/api/backend/config.py)**: Centralized configuration and validation.
+## 🚀 Deployment Strategy
+
+### **Frontend (Vercel)**
+DevHive is optimized for Vercel's edge network. The `vercel.json` automatically handles rewrites to the FastAPI server.
+
+### **Backend (Render)**
+Deploy the backend as a Web Service on Render using the following build command:
+`pip install -r requirements.txt` and start command: `python -m uvicorn frontend.api.index:app --host 0.0.0.0 --port $PORT`
 
 ---
 
-© 2026 Knowledge Transfer Platform | **Optimized for High-Speed Discovery**
+## 📂 System Manifest
+*   **[Core Logic](file:///c:/Users/Vardhan/OneDrive/Desktop/projects/Dev-Hive-main%20-%20Copy/frontend/api/backend/services/)**: Ingestion services, search engines, and AI generators.
+*   **[Schema Definitions](file:///c:/Users/Vardhan/OneDrive/Desktop/projects/Dev-Hive-main%20-%20Copy/frontend/api/backend/supabase/schema.sql)**: Database migrations and RLS policies.
+*   **[Analytics Module](file:///c:/Users/Vardhan/OneDrive/Desktop/projects/Dev-Hive-main%20-%20Copy/frontend/api/backend/routers/analytics.py)**: Backend metrics aggregation and processing.
+
+---
+
+© 2026 DevHive Enterprise | **Designed for High-Speed Knowledge Discovery**
