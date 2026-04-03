@@ -26,11 +26,12 @@ class AIGenerator:
                 "sources": []
             }
 
-        # 1. Prepare context string
+        # 1. Prepare context string with safety truncation
+        # 25k chars is ~7k-9k tokens, which fits comfortably in Groq's 12k TPM limit
         context_text = "\n\n".join([
             f"Source: {c['filename']} (Chunk {c['index']})\nContent: {c['text']}" 
             for c in context_chunks
-        ])
+        ])[:25000]
 
         # 2. Build prompt
         prompt = f"""

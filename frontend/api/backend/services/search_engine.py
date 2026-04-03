@@ -17,9 +17,9 @@ class SearchEngine:
             raise ValueError("Supabase client is not initialized.")
             
         # 1. Detect "Global" queries to increase search depth
-        # If user asks for a summary of everything, we need more than 5 chunks
+        # For free tier Groq (12k TPM limit), we use 20 chunks to avoid "Request Too Large" errors
         is_global = any(word in query.lower() for word in ["summarize all", "all files", "everything", "all documents", "total overview"])
-        actual_top_k = 40 if is_global else top_k
+        actual_top_k = 20 if is_global else top_k
 
         # 2. Generate query embedding
         query_vector = await embedding_service.generate_embedding(query)
