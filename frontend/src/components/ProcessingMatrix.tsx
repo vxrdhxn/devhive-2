@@ -44,7 +44,6 @@ export function ProcessingMatrix() {
       .from('documents')
       .select('id, filename, status, created_at')
       .order('created_at', { ascending: false })
-      .limit(5)
 
     if (!error && data) {
       setDocs(data)
@@ -75,7 +74,7 @@ export function ProcessingMatrix() {
       </div>
 
       {/* Terminal Body */}
-      <div className="space-y-4 font-mono text-[10px] min-h-[160px]">
+      <div className="space-y-4 font-mono text-[10px] min-h-[160px] max-h-[300px] overflow-y-auto pr-2">
         {loading && docs.length === 0 ? (
           <div className="text-muted animate-pulse font-bold uppercase tracking-widest">Awaiting Knowledge Stream...</div>
         ) : (
