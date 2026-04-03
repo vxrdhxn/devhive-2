@@ -24,11 +24,15 @@ async def get_overview_stats(current_user: User = Depends(require_admin_or_manag
     total_queries = queries_res.count if queries_res.count is not None else 0
 
     # 2. Average Confidence (only for queries that have it)
-    conf_res = await anyio.to_thread.run_sync(
-        lambda: supabase.table("query_logs").select("confidence").not_.is_("confidence", "null").execute()
-    )
-    conf_data = conf_res.data or []
-    avg_confidence = sum(c['confidence'] for c in conf_data) / len(conf_data) if conf_data else 0
+    try:
+        conf_res = await anyio.to_thread.run_sync(
+            lambda: supabase.table("query_logs").select("confidence").not_.is_("confidence", "null").execute()
+        )
+        conf_data = conf_res.data or []
+        avg_confidence = sum(c['confidence'] for c in conf_data) / len(conf_data) if conf_data else 0
+    except Exception as e:
+        print(f"Warning: Failed to fetch confidence (is the column missing?): {e}")
+        avg_confidence = 0
 
     # 3. Active Users (unique user_ids in logs)
     users_res = await anyio.to_thread.run_sync(

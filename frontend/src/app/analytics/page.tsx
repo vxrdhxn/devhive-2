@@ -38,16 +38,23 @@ export default function AnalyticsPage() {
           fetch(`${backendUrl}/analytics/top-terms`, { headers })
         ])
 
-        if (!statsRes.ok) throw new Error("Failed to fetch statistics")
+        if (!statsRes.ok) {
+          const errorData = await statsRes.json().catch(() => ({ detail: "Unknown error" }))
+          throw new Error(errorData.detail || `Access Denied (${statsRes.status})`)
+        }
         
-        const statsData = await statsRes.json()
-        const trendsData = await trendsRes.json()
-        const termsData = await termsRes.json()
+        const [statsData, trendsData, termsData] = await Promise.all([
+          statsRes.json(),
+          trendsRes.json(),
+          termsRes.json()
+        ])
 
         setStats(statsData)
         setTrends(trendsData)
         setTopTerms(termsData)
+        setError(null)
       } catch (err: any) {
+        console.error("Analytics fetch error:", err)
         setError(err.message)
       } finally {
         setLoading(false)
@@ -68,11 +75,36 @@ export default function AnalyticsPage() {
   )
 
   if (error) return (
-    <div className="flex h-screen items-center justify-center bg-background text-destructive p-4 text-center">
-      <div>
-        <h1 className="text-2xl font-bold mb-2">Access Restricted</h1>
-        <p className="text-muted-foreground">{error === "Unauthorized" ? "Admin or Manager role required." : error}</p>
-      </div>
+    <div className="flex h-screen items-center justify-center bg-background text-foreground p-4 text-center">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="max-w-md bg-card border border-border rounded-3xl p-10 shadow-2xl"
+      >
+        <div className="h-16 w-16 bg-destructive/10 text-destructive rounded-2xl flex items-center justify-center mx-auto mb-6">
+          <Activity className="h-8 w-8" />
+        </div>
+        <h1 className="text-2xl font-black tracking-tighter mb-2">Access Restricted</h1>
+        <p className="text-muted-foreground font-medium mb-8 leading-relaxed">
+          {error.includes("Access denied") 
+            ? "Your current role does not have permission to view system-wide analytics. This feature is restricted to Admin and Manager accounts." 
+            : `System Error: ${error}`}
+        </p>
+        <div className="flex flex-col gap-3">
+          <button 
+            onClick={() => window.location.reload()}
+            className="w-full py-3 bg-foreground text-background rounded-xl font-bold hover:opacity-90 transition-all"
+          >
+            Try Again
+          </button>
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="w-full py-3 bg-muted text-muted-foreground rounded-xl font-bold hover:bg-muted/80 transition-all"
+          >
+            Back to Workspace
+          </button>
+        </div>
+      </motion.div>
     </div>
   )
 

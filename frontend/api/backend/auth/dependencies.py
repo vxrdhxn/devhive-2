@@ -92,6 +92,7 @@ async def require_role(allowed_roles: list[str], credentials: HTTPAuthorizationC
             lambda: supabase.table("profiles").select("role").eq("id", user.id).single().execute()
         )
         user_role = profile_res.data.get("role") if profile_res.data else "employee"
+        user_role = user_role.lower() # Case-insensitive check
 
         if user_role not in allowed_roles:
             raise HTTPException(
