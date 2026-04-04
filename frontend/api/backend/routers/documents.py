@@ -48,13 +48,20 @@ async def upload_document(
             user_id=current_user.id,
             is_private=is_private
         )
-        print(f"DEBUG: Ingestion SUCCEEDED for {file.filename}")
+        print(f"DEBUG: Ingestion SUCCEEDED for {file.filename} (Result: {result.get('status')})")
     except Exception as e:
         print(f"DEBUG: Task failed for document {file.filename}: {e}")
         raise HTTPException(status_code=500, detail=f"Ingestion failed: {str(e)}")
 
+    if result.get("status") == "duplicate":
+        return {
+            "status": "duplicate", 
+            "message": result.get("message", "Document already exists"), 
+            "filename": file.filename
+        }
+
     print(f"DEBUG: Returning success for upload of {file.filename}")
-    return {"message": "Document processed and inserted successfully", "filename": file.filename}
+    return {"status": "success", "message": "Document processed and inserted successfully", "filename": file.filename}
 
 @router.get("/")
 async def get_documents(current_user: User = Depends(get_current_user)):

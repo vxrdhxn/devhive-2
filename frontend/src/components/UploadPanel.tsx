@@ -8,14 +8,16 @@ import { motion, AnimatePresence } from "framer-motion"
 export function UploadPanel() {
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
-  const [status, setStatus] = useState<"idle" | "success" | "error" | "offline">("idle")
+  const [status, setStatus] = useState<"idle" | "success" | "error" | "offline" | "duplicate">("idle")
   const [isPrivate, setIsPrivate] = useState(false)
   const supabase = createClient()
+  const [duplicateMessage, setDuplicateMessage] = useState("")
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setFile(e.target.files[0])
       setStatus("idle")
+      setDuplicateMessage("")
     }
   }
 
@@ -23,6 +25,7 @@ export function UploadPanel() {
     if (!file) return
     setUploading(true)
     setStatus("idle")
+    setDuplicateMessage("")
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -46,9 +49,15 @@ export function UploadPanel() {
         throw new Error(errData.detail || "Upload failed")
       }
       
-      setStatus("success")
-      setFile(null)
-      setIsPrivate(false)
+      const data = await res.json()
+      if (data.status === "duplicate") {
+        setStatus("duplicate")
+        setDuplicateMessage(data.message)
+      } else {
+        setStatus("success")
+        setFile(null)
+        setIsPrivate(false)
+      }
     } catch (err: any) {
       console.error("Upload error details:", err)
       if (err.name === "TypeError" && err.message === "Failed to fetch") {
@@ -183,6 +192,16 @@ export function UploadPanel() {
           >
             <AlertCircle className="h-4 w-4" />
             Ingestion Request Failed
+          </motion.div>
+        )}
+        {status === "duplicate" && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-6 p-4 border border-amber-500/20 bg-amber-500/5 text-amber-500 rounded-xl flex items-center gap-3 text-xs font-bold uppercase tracking-widest"
+          >
+            <AlertCircle className="h-4 w-4" />
+            {duplicateMessage || "Duplicate Content Detected"}
           </motion.div>
         )}
         {status === "offline" && (

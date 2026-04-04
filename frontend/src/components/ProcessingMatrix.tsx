@@ -86,6 +86,7 @@ export function ProcessingMatrix() {
             {docs.map((doc) => {
               const isCompleted = doc.status === 'completed'
               const isError = doc.status === 'error'
+              const isDuplicate = doc.status === 'duplicate'
               
               return (
                 <motion.div 
@@ -104,6 +105,7 @@ export function ProcessingMatrix() {
                     <div className={`flex items-center gap-2 px-2 py-1 rounded-md border text-[9px] font-black uppercase tracking-widest ${
                       isCompleted ? 'text-emerald-500 border-emerald-500/20 bg-emerald-500/5' : 
                       isError ? 'text-red-500 border-red-500/20 bg-red-500/5' : 
+                      isDuplicate ? 'text-amber-500 border-amber-500/20 bg-amber-500/5' :
                       'text-muted border-border bg-muted/5 animate-pulse'
                     }`}>
                       {doc.status}
