@@ -133,7 +133,12 @@ class IngestionService:
                         }).eq('id', doc_id).execute()
                     )
                     
-                    raise ValueError(f"Content already exists in the knowledge base (matched document ID: {matched_doc_id})")
+                    return {
+                        "status": "duplicate",
+                        "document_id": doc_id,
+                        "matched_document_id": matched_doc_id,
+                        "message": f"Content already exists in the knowledge base (matched ID: {matched_doc_id})"
+                    }
             # -----------------------------------
             
             # 5. Insert Chunks into Supabase
