@@ -9,7 +9,7 @@ class NotionAdapter(BaseIntegrationAdapter):
     Adapter for Notion API. Fetch pages and index their content.
     """
     
-    async def sync(self, integration_id: str, api_token: str, base_url: str = None) -> Dict[str, Any]:
+    async def sync(self, integration_id: str, user_id: str, api_token: str, base_url: str = None) -> Dict[str, Any]:
         headers = {
             "Authorization": f"Bearer {api_token}",
             "Notion-Version": "2022-06-28",
@@ -60,23 +60,14 @@ class NotionAdapter(BaseIntegrationAdapter):
                     page_text = "\n".join(page_text_list)
                     if page_text.strip():
                         # 3. Index via IngestionService
-                        from backend.auth.dependencies import supabase
-                        if not supabase:
-                            raise Exception("Supabase not initialized")
-                            
-                        # Get user_id for this integration
-                        integ_res = supabase.table('integrations').select('user_id').eq('id', integration_id).single().execute()
-                        if integ_res and integ_res.data:
-                            user_id = str(integ_res.data['user_id'])
-                            
-                            await ingestion_service.process_text_content(
-                                text=page_text,
-                                filename=f"Notion: {title}",
-                                file_type="notion",
-                                user_id=user_id,
-                                metadata={"notion_page_id": page_id, "url": page.get("url")}
-                            )
-                            indexed_count = indexed_count + 1
+                        await ingestion_service.process_text_content(
+                            text=page_text,
+                            filename=f"Notion: {title}",
+                            file_type="notion",
+                            user_id=user_id,
+                            metadata={"notion_page_id": page_id, "url": page.get("url")}
+                        )
+                        indexed_count = indexed_count + 1
             
             return {
                 "status": "success",

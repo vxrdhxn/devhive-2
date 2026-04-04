@@ -8,7 +8,7 @@ from datetime import datetime
 
 class GenericAdapter(BaseIntegrationAdapter):
     """Fallback adapter that treats any URI as a web source to index content."""
-    async def sync(self, integration_id: str, api_token: str, base_url: str | None = None) -> Dict[str, Any]:
+    async def sync(self, integration_id: str, user_id: str, api_token: str, base_url: str | None = None) -> Dict[str, Any]:
         if not base_url:
             return {
                 "status": "partial",
@@ -35,14 +35,9 @@ class GenericAdapter(BaseIntegrationAdapter):
                     source_text = response.text
                 
                 # Index the results
-                from backend.auth.dependencies import supabase
-                integ_res = supabase.table('integrations').select('user_id', 'platform_name').eq('id', integration_id).single().execute()
-                user_id = str(integ_res.data['user_id'])
-                platform_name = str(integ_res.data['platform_name'])
-                
                 await ingestion_service.process_text_content(
                     text=source_text,
-                    filename=f"{platform_name}: {base_url}",
+                    filename=f"Web: {base_url}",
                     file_type="web",
                     user_id=user_id,
                     metadata={"source_url": base_url}
@@ -74,8 +69,24 @@ class IntegrationManager:
             "rest": generic,
         }
         
-    def get_adapter(self, platform_type: str) -> BaseIntegrationAdapter:
-        return self._adapters.get(platform_type.lower(), GenericAdapter())
+    def get_adapter(self, platform_type: str, integration: Dict[str, Any] = None) -> BaseIntegrationAdapter:
+        # 1. Direct lookup
+        adapter = self._adapters.get(platform_type.lower())
+        if adapter:
+            return adapter
+            
+        # 2. Inference for legacy or generic 'rest' bridges
+        if integration:
+            name_lower = integration.get('platform_name', '').lower()
+            url_lower = integration.get('base_url', '') or ''
+            url_lower = url_lower.lower()
+            
+            if 'github' in name_lower or 'github.com' in url_lower:
+                return self._adapters['github']
+            if 'notion' in name_lower or 'notion.so' in url_lower:
+                return self._adapters['notion']
+                
+        return GenericAdapter()
 
 integration_manager = IntegrationManager()
 

@@ -3,6 +3,7 @@ from typing import List, Dict, Any
 from backend.auth.dependencies import get_current_user, User, supabase
 from backend.services.integrations.manager import integration_manager
 from datetime import datetime
+import anyio
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
@@ -21,7 +22,9 @@ async def sync_integration(
     print(f"DEBUG: Sync requested for {integration_id} by user {current_user.id}")
 
     # 1. Fetch integration and user role
-    res = supabase.table("integrations").select("*").eq("id", integration_id).single().execute()
+    res = await anyio.to_thread.run_sync(
+        lambda: supabase.table("integrations").select("*").eq("id", integration_id).single().execute()
+    )
     if not res.data:
         raise HTTPException(status_code=404, detail="Integration not found")
         
@@ -51,28 +54,36 @@ async def sync_integration(
         
     try:
         # 3. Update status to syncing
-        supabase.table("integrations").update({"status": "syncing"}).eq("id", integration_id).execute()
+        await anyio.to_thread.run_sync(
+            lambda: supabase.table("integrations").update({"status": "syncing"}).eq("id", integration_id).execute()
+        )
         
         # 4. Dispatch to adapter
-        adapter = integration_manager.get_adapter(platform_type)
+        adapter = integration_manager.get_adapter(platform_type, integration)
         sync_result = await adapter.sync(
             integration_id=integration_id,
+            user_id=integration.get("user_id"),
             api_token=api_token,
             base_url=base_url
         )
         
         # 5. Update last_synced_at and status
-        supabase.table("integrations").update({
-            "status": "active",
-            "last_synced_at": datetime.utcnow().isoformat()
-        }).eq("id", integration_id).execute()
+        await anyio.to_thread.run_sync(
+            lambda: supabase.table("integrations").update({
+                "status": "active",
+                "last_synced_at": datetime.utcnow().isoformat()
+            }).eq("id", integration_id).execute()
+        )
         
         return sync_result
         
     except Exception as e:
         # Revert status to error
-        supabase.table("integrations").update({"status": "error"}).eq("id", integration_id).execute()
-        raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
+        await anyio.to_thread.run_sync(
+            lambda: supabase.table("integrations").update({"status": "error"}).eq("id", integration_id).execute()
+        )
+        error_msg = str(e) if str(e) else "Internal processing error during synchronization"
+        raise HTTPException(status_code=500, detail=f"Sync failed: {error_msg}")
 
 @router.get("/")
 async def get_integrations(current_user: User = Depends(get_current_user)):
@@ -113,11 +124,10 @@ async def delete_integration(
         if not (is_owner or is_privileged):
             raise HTTPException(status_code=403, detail="Not authorized to delete this integration")
 
-        supabase.table("integrations").delete().eq("id", integration_id).execute()
+        await anyio.to_thread.run_sync(
+            lambda: supabase.table("integrations").delete().eq("id", integration_id).execute()
+        )
         return {"message": "Integration removed successfully"}
     except Exception as e:
         if isinstance(e, HTTPException): raise e
-        raise HTTPException(status_code=500, detail=f"Failed to remove integration: {str(e)}")
-    except Exception as e:
-        if isinstance(e, HTTPException): raise e
-        raise HTTPException(status_code=500, detail=f"Failed to remove integration: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Deletion failed: {str(e) or 'Unknown error'}")

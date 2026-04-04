@@ -10,7 +10,7 @@ class GitHubAdapter(BaseIntegrationAdapter):
     Adapter for GitHub API. Fetches documents (README, markdown, code) and indexes them.
     """
     
-    async def sync(self, integration_id: str, api_token: str, base_url: str = None) -> Dict[str, Any]:
+    async def sync(self, integration_id: str, user_id: str, api_token: str, base_url: str = None) -> Dict[str, Any]:
         if not base_url:
             raise Exception("GitHub requires a repository URL in the Endpoint URI field")
             
@@ -41,47 +41,58 @@ class GitHubAdapter(BaseIntegrationAdapter):
             tree_res.raise_for_status()
             tree_data = tree_res.json()
             
-            from backend.auth.dependencies import supabase
-            integ_res = supabase.table('integrations').select('user_id').eq('id', integration_id).single().execute()
-            user_id = str(integ_res.data['user_id'])
-            
-            indexed_count = 0
+            # Filter for documentation/text blobs
+            sync_queue = []
             for item in tree_data.get("tree", []):
-                # Filter for documentation/text blobs
                 path = item.get("path", "")
                 if item.get("type") == "blob" and (path.endswith(".md") or path.endswith(".txt")):
-                    # 4. Fetch Blob Content
+                    sync_queue.append(item)
+            
+            # SAFETY: Limit to 50 files per sync to avoid Vercel timeouts
+            MAX_FILES = 50
+            sync_queue = sync_queue[:MAX_FILES]
+            
+            import asyncio
+            semaphore = asyncio.Semaphore(5) # Concurrency limit
+
+            async def process_item(item):
+                async with semaphore:
+                    path = item.get("path", "")
                     blob_url = item.get("url")
-                    download_res = await client.get(blob_url, headers=headers)
-                    if download_res.status_code == 200:
-                        f_data = download_res.json()
-                        content_b64 = f_data.get("content", "")
-                        encoding = f_data.get("encoding", "")
-                        
-                        if encoding == "base64":
-                            try:
-                                # GitHub base64 can contain newlines
-                                text = base64.b64decode(content_b64.replace('\n', '')).decode("utf-8")
-                            except Exception:
-                                continue # Skip binary or malformed files
-                        else:
-                            text = content_b64 # Possibly already decoded or raw
+                    try:
+                        download_res = await client.get(blob_url, headers=headers)
+                        if download_res.status_code == 200:
+                            f_data = download_res.json()
+                            content_b64 = f_data.get("content", "")
+                            encoding = f_data.get("encoding", "")
                             
-                        await ingestion_service.process_text_content(
-                            text=text,
-                            filename=f"GitHub: {repo_full_name}/{path}",
-                            file_type="github",
-                            user_id=user_id,
-                            metadata={"github_repo": repo_full_name, "path": path, "branch": default_branch}
-                        )
-                        indexed_count += 1
+                            if encoding == "base64":
+                                text = base64.b64decode(content_b64.replace('\n', '')).decode("utf-8")
+                            else:
+                                text = content_b64
+                                
+                            await ingestion_service.process_text_content(
+                                text=text,
+                                filename=f"GitHub: {repo_full_name}/{path}",
+                                file_type="github",
+                                user_id=user_id,
+                                metadata={"github_repo": repo_full_name, "path": path, "branch": default_branch}
+                            )
+                            return True
+                    except Exception as e:
+                        print(f"Warning: Failed to index {path}: {str(e)}")
+                    return False
+
+            # Execute in parallel
+            results = await asyncio.gather(*[process_item(item) for item in sync_queue])
+            indexed_count = sum(1 for r in results if r)
             
             return {
                 "status": "success",
                 "repo": repo_full_name,
                 "branch": default_branch,
                 "pages_indexed": indexed_count,
-                "message": f"Successfully indexed {indexed_count} files recursively from {default_branch}.",
+                "message": f"Indexed {indexed_count} files from {default_branch}.",
                 "timestamp": datetime.now().isoformat()
             }
 

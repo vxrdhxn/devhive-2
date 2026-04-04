@@ -54,8 +54,13 @@ export function IntegrationsPanel() {
         return
       }
 
-      // Infer platform type (simple heuristic)
-      const platformType = platformName.toLowerCase().includes('notion') ? 'notion' : 'rest'
+      // Infer platform type
+      const platformNameLower = platformName.toLowerCase()
+      const platformType = platformNameLower.includes('notion') 
+        ? 'notion' 
+        : platformNameLower.includes('github') 
+          ? 'github' 
+          : 'rest'
 
       const newConnection = {
         user_id: user.id,
@@ -129,8 +134,17 @@ export function IntegrationsPanel() {
       })
       
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}))
-        throw new Error(errData.detail || "Sync failed")
+        let errorMessage = "Sync failed"
+        try {
+          const errData = await response.json()
+          errorMessage = typeof errData.detail === 'string' 
+            ? errData.detail 
+            : (errData.detail?.[0]?.msg || JSON.stringify(errData) || "Sync failed")
+        } catch (e) {
+          // Fallback for non-JSON errors (e.g. Vercel 504 Gateway Timeout)
+          errorMessage = `Server Error (${response.status} ${response.statusText}). The synchronization may still be running in the background, or it may have timed out. Please check again in a few minutes.`
+        }
+        throw new Error(errorMessage)
       }
       
       const result = await response.json()
@@ -142,7 +156,8 @@ export function IntegrationsPanel() {
       }
     } catch (err: any) {
       console.error(err)
-      alert(`Sync failed: ${err.message}`)
+      const message = err.message.includes("Sync failed") ? err.message : `Sync failed: ${err.message}`
+      alert(message)
     } finally {
       setSyncingId(null)
     }
