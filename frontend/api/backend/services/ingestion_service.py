@@ -59,6 +59,37 @@ class IngestionService:
         if not supabase:
             raise ValueError("Supabase client is not initialized.")
 
+        # --- FILENAME DEDUPLICATION CHECK ---
+        # Check if a document with the same filename already exists for this user
+        existing_doc_res = await anyio.to_thread.run_sync(
+            lambda: supabase.table('documents').select('id').eq('filename', filename).eq('uploaded_by', user_id).eq('status', 'completed').limit(1).execute()
+        )
+        
+        if existing_doc_res.data and len(existing_doc_res.data) > 0:
+            matched_doc_id = existing_doc_res.data[0]['id']
+            print(f"DEBUG: DUPLICATE FILENAME DETECTED for {filename}")
+            
+            # Insert document as duplicate immediately
+            doc_data = {
+                'filename': filename,
+                'file_type': file_type,
+                'uploaded_by': user_id,
+                'status': 'duplicate',
+                'is_private': is_private,
+                'metadata': {** (extra_metadata or {}), 'duplicate_of': matched_doc_id, 'match_type': 'filename'}
+            }
+            doc_response = await anyio.to_thread.run_sync(
+                lambda: supabase.table('documents').insert(doc_data).execute()
+            )
+            
+            return {
+                "status": "duplicate",
+                "document_id": doc_response.data[0]['id'] if doc_response.data else None,
+                "matched_document_id": matched_doc_id,
+                "message": f"A file with name '{filename}' already exists."
+            }
+        # ------------------------------------
+
         # 1. Insert Document record
         doc_data = {
             'filename': filename,
@@ -117,19 +148,19 @@ class IngestionService:
                             'query_embedding': first_chunk_embedding,
                             'match_threshold': 0.95,
                             'match_count': 1,
-                            'requesting_user_id': user_id
+                            'user_id': user_id
                         }
                     ).execute()
                 )
                 
                 if similarity_res.data and len(similarity_res.data) > 0:
                     matched_doc_id = similarity_res.data[0].get('document_id')
-                    print(f"DEBUG: DUPLICATE DETECTED! Found match with document {matched_doc_id}")
+                    print(f"DEBUG: DUPLICATE DETECTED! Found content match with document {matched_doc_id}")
                     
                     await anyio.to_thread.run_sync(
                         lambda: supabase.table('documents').update({
                             'status': 'duplicate',
-                            'metadata': {** (extra_metadata or {}), 'duplicate_of': matched_doc_id}
+                            'metadata': {** (extra_metadata or {}), 'duplicate_of': matched_doc_id, 'match_type': 'content'}
                         }).eq('id', doc_id).execute()
                     )
                     
