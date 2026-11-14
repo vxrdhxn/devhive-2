@@ -10,7 +10,7 @@ import {
   TrendingUp, Users, Search, Activity, 
   ArrowUpRight, ArrowDownRight, Zap, Target
 } from "lucide-react"
-import { createClient } from "@/utils/supabase/client"
+import { apiFetch } from "@/lib/api"
 import { Navbar } from "@/components/Navbar"
 import { CommandMenu } from "@/components/CommandMenu"
 
@@ -20,24 +20,14 @@ export default function AnalyticsPage() {
   const [topTerms, setTopTerms] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-          setError("Unauthorized")
-          return
-        }
-
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "/api"
-        const headers = { 'Authorization': `Bearer ${session.access_token}` }
-
         const [statsRes, trendsRes, termsRes] = await Promise.all([
-          fetch(`${backendUrl}/analytics/stats`, { headers }),
-          fetch(`${backendUrl}/analytics/trends`, { headers }),
-          fetch(`${backendUrl}/analytics/top-terms`, { headers })
+          apiFetch("/analytics/stats"),
+          apiFetch("/analytics/trends"),
+          apiFetch("/analytics/top-terms")
         ])
 
         if (!statsRes.ok) {

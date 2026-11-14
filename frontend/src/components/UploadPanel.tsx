@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
-import { createClient } from "@/utils/supabase/client"
+import { apiFetch } from "@/lib/api"
 import { motion, AnimatePresence } from "framer-motion"
 
 export function UploadPanel() {
@@ -10,7 +10,6 @@ export function UploadPanel() {
   const [uploading, setUploading] = useState(false)
   const [status, setStatus] = useState<"idle" | "success" | "error" | "offline" | "duplicate">("idle")
   const [isPrivate, setIsPrivate] = useState(false)
-  const supabase = createClient()
   const [duplicateMessage, setDuplicateMessage] = useState("")
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,19 +27,12 @@ export function UploadPanel() {
     setDuplicateMessage("")
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
       const formData = new FormData()
       formData.append("file", file)
       formData.append("is_private", isPrivate.toString())
 
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "/api"
-      // Note: We use query params for boolean/simple flags to match FastAPI's easier handling of non-file fields in some setups
-      const res = await fetch(`${backendUrl}/documents/upload?is_private=${isPrivate}`, {
+      const res = await apiFetch("/documents/upload", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`
-        },
         body: formData
       })
       

@@ -1,50 +1,70 @@
 # 🚀 DevHive: Deployment Guide
 
-Follow these steps to take your project from local development to a professional production environment using **Vercel** and **Supabase**.
+The whole app — UI, API, auth, document processing and AI search — is a single
+**Next.js** project in `frontend/`, deployed to **Vercel**. Data lives in **Neon**
+(Postgres + pgvector). There is no separate backend server.
+
+| Piece | Where it runs |
+| --- | --- |
+| Pages + API routes (`src/app/api/*`) | Vercel (Node.js functions) |
+| Auth (email/password, bcrypt, JWT in httpOnly cookie) | Vercel |
+| Text extraction (PDF, DOCX, PPTX, XLSX, RTF, CSV, TXT, MD) | Vercel |
+| Embeddings (BAAI/bge-small-en-v1.5, ONNX, no API key) | Vercel |
+| AI answers | Groq / any OpenAI-compatible API / Neon AI Gateway |
+| Database + vector search | Neon |
+
+> **The first account that signs up becomes the workspace admin.**
 
 ---
 
-## 🏗️ Phase 1: Database Setup (Supabase)
+## 🏗️ 1. Database (Neon)
 
-1.  Log in to your [Supabase Dashboard](https://supabase.com).
-2.  Open your project and go to the **SQL Editor**.
-3.  Copy the contents of [schema.sql](./frontend/api/backend/supabase/schema.sql) and run it.
-4.  This will create all tables, RBAC roles, and security policies.
+The repo is already linked to a Neon project (`neon.ts`, `.neon`). To get the
+connection strings into the repo-root `.env`:
 
----
+```bash
+neon env pull
+```
 
-## ⚙️ Phase 2: Deployment (Vercel)
-
-1.  Log in to [Vercel](https://vercel.com).
-2.  Click **Add New** > **Project**.
-3.  Connect your GitHub repository.
-4.  **Configure the Project**:
-    -   **Framework Preset**: `Next.js`
-    -   **Root Directory**: `frontend`
-5.  **Environment Variables**:
-    Add the following:
-    -   `NEXT_PUBLIC_SUPABASE_URL`: (From Supabase settings)
-    -   `NEXT_PUBLIC_SUPABASE_ANON_KEY`: (From Supabase settings)
-    -   `SUPABASE_URL`: (Same as above)
-    -   `SUPABASE_SERVICE_ROLE_KEY`: (From Supabase settings)
-    -   `DATABASE_URL`: (Your Postgres URI)
-    -   `GROQ_API_KEY`: (Your Groq Key)
-    -   `HUGGINGFACE_API_KEY`: (Your HF Key)
-6.  Click **Deploy**.
+The schema in [`frontend/db/schema.sql`](frontend/db/schema.sql) is applied
+automatically before every build (`npm run build` runs `npm run db:migrate`).
 
 ---
 
-## 🔗 Phase 3: Post-Deployment Config
+## 🎨 2. Vercel
 
-1.  Once Vercel finishes, go to **Settings > Functions**.
-2.  Ensure your backend is correctly serving from the `/api` route (handled by `vercel.json`).
-3.  Test the health check at `https://your-url.vercel.app/api/health`.
+1. Vercel project → **Settings → General → Root Directory**: `frontend`
+   (Framework preset: Next.js).
+2. **Settings → Environment Variables** (Production + Preview):
+
+   | Key | Value |
+   | --- | --- |
+   | `DATABASE_URL` | Neon **pooled** URL (from the root `.env`) |
+   | `DATABASE_URL_UNPOOLED` | Neon **direct** URL (from the root `.env`) |
+   | `JWT_SECRET` | long random string (copy from your `.env`) |
+   | `GROQ_API_KEY` | from console.groq.com (or set `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL`) |
+
+   Remove the old `NEXT_PUBLIC_SUPABASE_*` and `BACKEND_URL` variables.
+3. Deploy (push to the production branch, or **Redeploy**).
+
+Upload and search functions use up to 300 s (`maxDuration`), which requires
+Fluid compute — on by default for new Vercel projects.
 
 ---
 
-### ✅ Post-Deployment Checks
-- [ ] Visit your Vercel URL and try to sign up.
-- [ ] Upload a small PDF to verify the "Neural Matrix" connectivity.
-- [ ] Check the **System Analytics** to ensure metrics are being logged correctly.
+## 💻 Local development
 
-**Your Enterprise Knowledge Platform is now Live!**
+```bash
+cd frontend
+npm install
+npm run env:sync     # copy DATABASE_URL etc. from ../.env into .env.local
+npm run dev
+```
+
+---
+
+### ✅ Post-deployment checks
+- [ ] Visit the site and sign up (first account = admin).
+- [ ] Upload a small PDF and watch it reach **completed** in the processing panel.
+- [ ] Search for something in it.
+- [ ] Open **System Overview** and check the Member Directory.

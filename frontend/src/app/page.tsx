@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { logout } from "./login/actions"
 import { LayoutGrid, Activity } from "lucide-react"
@@ -12,11 +12,7 @@ import { CommandMenu } from "@/components/CommandMenu"
 import { Navbar } from "@/components/Navbar"
 
 export default async function Home() {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
 
   if (!user) {
     redirect("/login")

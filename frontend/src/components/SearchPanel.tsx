@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Search, Loader2, FileText, Bot, Sparkles, ChevronRight, Activity, LayoutGrid } from "lucide-react"
-import { createClient } from "@/utils/supabase/client"
+import { apiFetch } from "@/lib/api"
 import { motion, AnimatePresence } from "framer-motion"
 import { DocumentViewer } from "./DocumentViewer"
 import ReactMarkdown from "react-markdown"
@@ -32,7 +32,6 @@ export function SearchPanel() {
   const [activeDocId, setActiveDocId] = useState<string | null>(null)
   const [activeChunkId, setActiveChunkId] = useState<string | undefined>(undefined)
 
-  const supabase = createClient()
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -44,14 +43,10 @@ export function SearchPanel() {
     setActiveDocId(null) // Reset split view on new search
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "/api"
-      const res = await fetch(`${backendUrl}/search`, {
+      const res = await apiFetch("/search", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`
         },
         body: JSON.stringify({
           query,

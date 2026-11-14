@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { motion } from "framer-motion"
 import { X, FileText, Loader2, Sparkles } from "lucide-react"
-import { createClient } from "@/utils/supabase/client"
+import { apiJson } from "@/lib/api"
 
 type DocumentViewerProps = {
   documentId: string
@@ -21,7 +21,6 @@ export function DocumentViewer({ documentId, activeChunkId, onClose }: DocumentV
   const [chunks, setChunks] = useState<Chunk[]>([])
   const [docName, setDocName] = useState("Loading Document...")
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
   
   // Create a ref map to dynamically scroll to the correct chunk
   const chunkRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
@@ -30,29 +29,14 @@ export function DocumentViewer({ documentId, activeChunkId, onClose }: DocumentV
     async function fetchDocument() {
       setLoading(true)
       
-      // Get doc name
-      const { data: docData } = await supabase
-        .from('documents')
-        .select('filename')
-        .eq('id', documentId)
-        .single()
-        
-      if (docData) setDocName(docData.filename)
-
-      // Get all chunks for doc
-      const { data: chunkData } = await supabase
-        .from('chunks')
-        .select('id, content, metadata')
-        .eq('document_id', documentId)
-
-      if (chunkData) {
-        // Sort chunks by their index metadata to reconstruct the document order
-        const sorted = [...chunkData].sort((a, b) => {
-          const idxA = a.metadata?.index || 0
-          const idxB = b.metadata?.index || 0
-          return idxA - idxB
-        })
-        setChunks(sorted)
+      try {
+        // Backend returns the document with its chunks already in original order
+        const doc = await apiJson<{ filename: string; chunks: Chunk[] }>(`/documents/${documentId}`)
+        setDocName(doc.filename)
+        setChunks(doc.chunks)
+      } catch (err) {
+        console.error("Failed to load document:", err)
+        setDocName("Document unavailable")
       }
       setLoading(false)
     }

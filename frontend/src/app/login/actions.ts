@@ -1,68 +1,73 @@
 "use server"
 
-import { createClient } from "@/utils/supabase/server"
 import { redirect } from "next/navigation"
+import { clearSessionCookie, createToken, hashPassword, setSessionCookie, verifyPassword } from "@/lib/auth"
+import { queryOne } from "@/lib/server/db"
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function readCredentials(formData: FormData): { email: string; password: string } | string {
+  const email = String(formData.get("email") || "").trim().toLowerCase()
+  const password = String(formData.get("password") || "")
+  if (!EMAIL_RE.test(email)) return "Enter a valid email address"
+  if (password.length < 6 || password.length > 128) return "Password must be 6-128 characters"
+  return { email, password }
+}
+
+const fail = (message: string): never => redirect(`/login?message=${encodeURIComponent(message)}`)
 
 export async function login(formData: FormData) {
-  const email = (formData.get("email") as string).toLowerCase()
-  const password = formData.get("password") as string
-  const supabase = await createClient()
+  const creds = readCredentials(formData)
+  if (typeof creds === "string") fail(creds)
+  const { email, password } = creds as { email: string; password: string }
 
-  if (password.length < 6) {
-    return redirect(`/login?message=${encodeURIComponent("Password must be at least 6 characters")}`)
-  }
+  const user = await queryOne<{ id: string; password_hash: string }>(
+    "SELECT id, password_hash FROM users WHERE email = $1",
+    [email],
+  )
+  if (!user || !(await verifyPassword(password, user.password_hash))) fail("Invalid email or password")
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  })
-
-  if (error) {
-    console.error("Login Error:", error.message)
-    return redirect(`/login?message=${encodeURIComponent(error.message)}`)
-  }
-
-  return redirect("/")
+  await setSessionCookie(await createToken(user!.id))
+  redirect("/")
 }
 
 export async function signup(formData: FormData) {
-  const email = (formData.get("email") as string).toLowerCase()
-  const password = formData.get("password") as string
-  const supabase = await createClient()
+  const creds = readCredentials(formData)
+  if (typeof creds === "string") fail(creds)
+  const { email, password } = creds as { email: string; password: string }
 
-  if (password.length < 6) {
-    return redirect(`/login?message=${encodeURIComponent("Password must be at least 6 characters")}`)
-  }
-
-  const { error, data } = await supabase.auth.signUp({
-    email,
-    password,
-  })
-
-  if (error) {
-    // If user already exists, logic fallthrough to attempt login anyway
-    if (error.message.includes("already registered") || error.message.includes("already exists")) {
-      const loginRes = await supabase.auth.signInWithPassword({ email, password })
-      if (!loginRes.error) return redirect("/")
+  let userId: string | undefined
+  try {
+    // The very first account becomes the workspace admin so someone can manage roles.
+    const row = await queryOne<{ id: string }>(
+      `INSERT INTO users (email, password_hash, role)
+       VALUES ($1, $2, CASE WHEN EXISTS (SELECT 1 FROM users) THEN 'employee' ELSE 'admin' END)
+       RETURNING id`,
+      [email, await hashPassword(password)],
+    )
+    userId = row!.id
+  } catch (err: any) {
+    if (err?.code === "23505") {
+      // Already registered: log in instead if the password matches.
+      const existing = await queryOne<{ id: string; password_hash: string }>(
+        "SELECT id, password_hash FROM users WHERE email = $1",
+        [email],
+      )
+      if (existing && (await verifyPassword(password, existing.password_hash))) {
+        await setSessionCookie(await createToken(existing.id))
+        redirect("/")
+      }
+      fail("An account with this email already exists")
     }
-    console.error("Signup Error:", error.message)
-    return redirect(`/login?message=${encodeURIComponent(error.message)}`)
+    console.error("Signup failed:", err)
+    fail("Could not create account. Please try again.")
   }
 
-  // If session is present (Auto-confirm is on), redirect to home
-  if (data?.session) {
-    return redirect("/")
-  }
-
-  // Final fallback: try to sign in immediately (works if unconfirmed is allowed)
-  const finalLogin = await supabase.auth.signInWithPassword({ email, password })
-  if (!finalLogin.error) return redirect("/")
-
-  return redirect("/login?message=Check email to continue sign in process")
+  await setSessionCookie(await createToken(userId!))
+  redirect("/")
 }
 
 export async function logout() {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
+  await clearSessionCookie()
   redirect("/login")
 }

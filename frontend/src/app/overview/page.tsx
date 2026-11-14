@@ -1,4 +1,5 @@
-import { createClient } from "@/utils/supabase/server"
+import { getCurrentUser } from "@/lib/auth"
+import { getOverview } from "@/lib/server/admin"
 import { redirect } from "next/navigation"
 import { Bot, FileText, Database, Activity, Server, ArrowUpRight, Cpu } from "lucide-react"
 import Link from "next/link"
@@ -7,57 +8,25 @@ import { MotionWrapper } from "@/components/MotionWrapper"
 import { MemberDirectory } from "@/components/MemberDirectory"
 
 export default async function OverviewDashboard() {
-  const supabase = await createClient()
-
-  const { data: { user } } = await supabase.auth.getUser()
+  const user = await getCurrentUser()
   if (!user) {
     redirect("/login")
   }
 
-  // Fetch role-based access for server-side guard
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || profile.role === 'employee') {
+  // Role-based server-side guard
+  if (user.role === "employee") {
     redirect("/")
   }
+  const profile = { role: user.role }
 
-  // Fetch real document counts from Supabase
-  const { count: documentCount } = await supabase
-    .from('documents')
-    .select('*', { count: 'exact', head: true })
-
-  const { count: chunkCount } = await supabase
-    .from('chunks')
-    .select('*', { count: 'exact', head: true })
-
-  // Fetch recently uploaded documents with uploader info
-  const { data: recentDocs } = await supabase
-    .from('documents')
-    .select('*, profiles!uploaded_by(email)')
-    .order('created_at', { ascending: false })
-    .limit(10)
-    
-  // Fetch integration history with uploader info (Shared workspace)
-  const { data: integrations } = await supabase
-    .from('integrations')
-    .select('*, profiles!inner(email)') // Using !inner for required profiles, or remove !inner for fallback
-    .order('created_at', { ascending: false })
-    .limit(8)
-    
-  // Fallback count if the join filters out unlinked profiles
-  const { count: integrationsCount } = await supabase
-    .from('integrations')
-    .select('*', { count: 'exact', head: true })
-
-  // Fetch all profiles for Member Management
-  const { data: allProfiles } = await supabase
-    .from('profiles')
-    .select('*')
-    .order('created_at', { ascending: true })
+  // Workspace-wide stats straight from the database
+  const overview = await getOverview()
+  const documentCount: number = overview.document_count
+  const chunkCount: number = overview.chunk_count
+  const recentDocs: any[] = overview.recent_documents
+  const integrations: any[] = overview.integrations
+  const allProfiles: any[] = overview.users
+  const integrationsCount: number = overview.integration_count
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground transition-colors duration-300">
@@ -145,7 +114,7 @@ export default async function OverviewDashboard() {
                           </span>
                         </td>
                         <td className="px-8 py-5 text-muted font-bold text-[10px] truncate max-w-[150px]">
-                           {doc.profiles?.email?.split('@')[0] || 'System'}
+                           {doc.uploader_email?.split('@')[0] || 'System'}
                         </td>
                         <td className="px-8 py-5 text-muted font-mono text-[10px] text-right font-bold">
                           {Math.floor(Math.random() * 5000) + 500}
@@ -182,7 +151,7 @@ export default async function OverviewDashboard() {
                       <p className="text-[9px] text-muted font-black uppercase tracking-[0.1em] mb-1">{new Date(log.created_at).toLocaleString()}</p>
                       <p className="text-xs font-black text-foreground uppercase tracking-tight">Bridge Connected</p>
                       <p className="text-[10px] text-muted font-bold truncate mt-1 uppercase opacity-60">
-                        {log.platform_name} • {log.profiles?.email || 'System'}
+                        {log.platform_name} • {log.user_email || 'System'}
                       </p>
                     </div>
                   </div>

@@ -6,26 +6,20 @@ import { usePathname } from "next/navigation"
 import { Bot, LogOut, Search, Command } from "lucide-react"
 import { ThemeToggle } from "./ThemeToggle"
 import { logout } from "@/app/login/actions"
-import { createClient } from "@/utils/supabase/client"
+import { apiFetch } from "@/lib/api"
  
 export function Navbar() {
   const pathname = usePathname()
   const [role, setRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
     async function getProfile() {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single()
-          
-          if (profile) setRole(profile.role)
+        const res = await apiFetch("/auth/me")
+        if (res.ok) {
+          const user = await res.json()
+          setRole(user.role)
         }
       } catch (err) {
         console.error("Error fetching role:", err)
@@ -34,7 +28,7 @@ export function Navbar() {
       }
     }
     getProfile()
-  }, [supabase])
+  }, [])
   
   return (
     <nav className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">

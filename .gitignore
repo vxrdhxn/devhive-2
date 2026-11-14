@@ -30,8 +30,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -56,3 +56,5 @@ Thumbs.db
 # Project specific
 backend/alembic/versions/*.pyc
 !backend/alembic/versions/*.py
+.neon
+backend/.model_cache/

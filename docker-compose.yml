@@ -1,0 +1,16 @@
+# Optional: local Postgres + pgvector instead of Neon:  docker compose up -d db
+# then set both DATABASE_URL and DATABASE_URL_UNPOOLED to postgresql://devhive:devhive@localhost:5432/devhive
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: devhive
+      POSTGRES_PASSWORD: devhive
+      POSTGRES_DB: devhive
+    ports:
+      - "5432:5432"
+    volumes:
+      - devhive_pg:/var/lib/postgresql/data
+
+volumes:
+  devhive_pg:

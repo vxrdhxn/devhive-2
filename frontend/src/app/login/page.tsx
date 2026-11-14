@@ -1,7 +1,10 @@
+import { redirect } from "next/navigation"
+import { getCurrentUser } from "@/lib/auth"
 import { login, signup } from "./actions"
 
 export default async function LoginPage(props: { searchParams: Promise<{ message: string }> }) {
   const searchParams = await props.searchParams
+  if (await getCurrentUser()) redirect("/")
 
   return (
     <div className="flex-1 flex flex-col w-full px-8 sm:max-w-md justify-center gap-2 m-auto mt-32">
@@ -19,6 +22,7 @@ export default async function LoginPage(props: { searchParams: Promise<{ message
             <input
               className="w-full rounded-xl px-5 py-4 bg-card border border-border focus:border-foreground focus:ring-0 focus:outline-none transition-all font-bold text-sm"
               name="email"
+              type="email"
               placeholder="e.g. director@devhive.ai"
               required
             />
@@ -33,6 +37,7 @@ export default async function LoginPage(props: { searchParams: Promise<{ message
               type="password"
               name="password"
               placeholder="••••••••"
+              minLength={6}
               required
             />
           </div>

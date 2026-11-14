@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Terminal, Activity, CheckCircle, Clock, AlertCircle, Trash2, Loader2 } from "lucide-react"
-import { createClient } from "@/utils/supabase/client"
+import { apiFetch } from "@/lib/api"
 
 type ProcessingDoc = {
   id: string
@@ -16,20 +16,12 @@ export function ProcessingMatrix() {
   const [docs, setDocs] = useState<ProcessingDoc[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const supabase = createClient()
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
     setDeletingId(id)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "/api"
-      const res = await fetch(`${backendUrl}/documents/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`
-        }
-      })
+      const res = await apiFetch(`/documents/${id}`, { method: "DELETE" })
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
         throw new Error(errData.detail || "Delete operation failed")
@@ -44,13 +36,11 @@ export function ProcessingMatrix() {
   }
 
   const fetchStatus = async () => {
-    const { data, error } = await supabase
-      .from('documents')
-      .select('id, filename, status, created_at')
-      .order('created_at', { ascending: false })
-
-    if (!error && data) {
-      setDocs(data)
+    try {
+      const res = await apiFetch("/documents")
+      if (res.ok) setDocs(await res.json())
+    } catch (err) {
+      console.error("Failed to fetch processing status:", err)
     }
     setLoading(false)
   }

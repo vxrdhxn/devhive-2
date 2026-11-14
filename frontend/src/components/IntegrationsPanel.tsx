@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Plug, CheckCircle2, Plus, Server, Key, Globe, Box, Layout, ShieldCheck, Trash2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { createClient } from "@/utils/supabase/client"
+import { apiFetch, apiJson } from "@/lib/api"
 
 type CustomIntegration = {
   id: string
@@ -20,7 +20,6 @@ export function IntegrationsPanel() {
   const [isAdding, setIsAdding] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [syncingId, setSyncingId] = useState<string | null>(null)
-  const supabase = createClient()
   
   // Form State
   const [platformName, setPlatformName] = useState("")
@@ -29,15 +28,11 @@ export function IntegrationsPanel() {
 
   useEffect(() => {
     async function loadConnections() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data } = await supabase
-        .from('integrations')
-        .select('*')
-        .order('created_at', { ascending: false })
-      
-      if (data) setConnections(data)
+      try {
+        setConnections(await apiJson<CustomIntegration[]>("/integrations"))
+      } catch (err) {
+        console.error("Failed to load integrations:", err)
+      }
     }
     loadConnections()
   }, [])
@@ -48,12 +43,6 @@ export function IntegrationsPanel() {
     
     setIsSubmitting(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        alert("Session expired. Please log in again.")
-        return
-      }
-
       // Infer platform type
       const platformNameLower = platformName.toLowerCase()
       const platformType = platformNameLower.includes('notion') 
@@ -62,25 +51,17 @@ export function IntegrationsPanel() {
           ? 'github' 
           : 'rest'
 
-      const newConnection = {
-        user_id: user.id,
-        platform_name: platformName,
-        base_url: baseUrl,
-        api_token: apiKey,
-        platform_type: platformType,
-        status: 'active'
-      }
+      const data = await apiJson<CustomIntegration>("/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform_name: platformName,
+          base_url: baseUrl,
+          api_token: apiKey,
+          platform_type: platformType,
+        }),
+      })
 
-      const { data, error } = await supabase
-        .from('integrations')
-        .insert([newConnection])
-        .select()
-        .single()
-
-      if (error) {
-        throw error
-      }
-      
       setConnections(prev => [data, ...prev])
       
       // Reset
@@ -100,14 +81,7 @@ export function IntegrationsPanel() {
     if (!confirm("Are you sure you want to remove this connection? This will stop all synchronization.")) return
     
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "/api"
-      const response = await fetch(`${backendUrl}/integrations/${integrationId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`
-        }
-      })
+      const response = await apiFetch(`/integrations/${integrationId}`, { method: 'DELETE' })
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}))
@@ -124,14 +98,7 @@ export function IntegrationsPanel() {
   const handleSync = async (integrationId: string) => {
     setSyncingId(integrationId)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "/api"
-      const response = await fetch(`${backendUrl}/integrations/${integrationId}/sync`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`
-        }
-      })
+      const response = await apiFetch(`/integrations/${integrationId}/sync`, { method: 'POST' })
       
       if (!response.ok) {
         let errorMessage = "Sync failed"
@@ -150,9 +117,9 @@ export function IntegrationsPanel() {
       const result = await response.json()
       alert(`Sync successful! Processed context from ${result.pages_indexed || result.items_indexed || result.pages_found || 0} nodes.`)
       
-      const { data } = await supabase.from('integrations').select('*').eq('id', integrationId).single()
-      if (data) {
-        setConnections(prev => prev.map(c => c.id === integrationId ? data : c))
+      const updated: CustomIntegration | undefined = result.integration
+      if (updated) {
+        setConnections(prev => prev.map(c => c.id === integrationId ? updated : c))
       }
     } catch (err: any) {
       console.error(err)

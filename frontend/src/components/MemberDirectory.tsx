@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { createClient } from "@/utils/supabase/client"
+import { apiJson } from "@/lib/api"
 import { Shield, User, Star, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -20,20 +20,18 @@ interface MemberDirectoryProps {
 export function MemberDirectory({ initialProfiles, currentUserRole }: MemberDirectoryProps) {
   const [profiles, setProfiles] = useState(initialProfiles)
   const [updating, setUpdating] = useState<string | null>(null)
-  const supabase = createClient()
   const router = useRouter()
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     if (currentUserRole !== 'admin') return
-    
+
     setUpdating(userId)
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', userId)
-
-      if (error) throw error
+      await apiJson(`/admin/users/${userId}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      })
 
       setProfiles(prev => prev.map(p => p.id === userId ? { ...p, role: newRole } : p))
       router.refresh()
