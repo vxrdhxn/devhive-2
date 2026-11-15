@@ -10,7 +10,7 @@ The whole app — UI, API, auth, document processing and AI search — is a sing
 | Auth (email/password, bcrypt, JWT in httpOnly cookie) | Vercel |
 | Text extraction (PDF, DOCX, PPTX, XLSX, RTF, CSV, TXT, MD) | Vercel |
 | Embeddings (BAAI/bge-small-en-v1.5, ONNX, no API key) | Vercel |
-| AI answers | Groq / any OpenAI-compatible API / Neon AI Gateway |
+| AI answers (default: Groq `openai/gpt-oss-20b`) | Groq / any OpenAI-compatible API / Neon AI Gateway |
 | Database + vector search | Neon |
 
 > **The first account that signs up becomes the workspace admin.**
@@ -43,12 +43,27 @@ automatically before every build (`npm run build` runs `npm run db:migrate`).
    | `DATABASE_URL_UNPOOLED` | Neon **direct** URL (from the root `.env`) |
    | `JWT_SECRET` | long random string (copy from your `.env`) |
    | `GROQ_API_KEY` | from console.groq.com (or set `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL`) |
+   | `GROQ_MODEL` | optional. Overrides the default `openai/gpt-oss-20b`. Groq retired the Llama 3.x models in Aug 2026, so an old `llama-*` value returns 404 |
 
    Remove the old `NEXT_PUBLIC_SUPABASE_*` and `BACKEND_URL` variables.
 3. Deploy (push to the production branch, or **Redeploy**).
 
 Upload and search functions use up to 300 s (`maxDuration`), which requires
 Fluid compute — on by default for new Vercel projects.
+
+Vercel functions are limited to 250 MB uncompressed. Embedding routes bundle
+ONNX Runtime, and `next.config.ts` ships only its linux-x64 **CPU** binaries
+(onnxruntime-node's postinstall also downloads CUDA/TensorRT providers, which
+would push `api/documents/upload` to ~370 MB). If a deploy fails with "exceeds
+the maximum uncompressed size limit", check `outputFileTracingIncludes`.
+
+### Troubleshooting
+| Symptom | Fix |
+| --- | --- |
+| Build fails in `db:migrate` | `DATABASE_URL_UNPOOLED` missing or wrong for that environment |
+| `@supabase/ssr: Your project's URL and API key are required` | The deploy is building an old pre-Neon commit. Redeploy from the latest `main` |
+| Function exceeds 250 MB | See the ONNX note above |
+| `groq returned 404: The model … does not exist` | Unset `GROQ_MODEL` or set it to a current Groq model |
 
 ---
 
@@ -66,5 +81,5 @@ npm run dev
 ### ✅ Post-deployment checks
 - [ ] Visit the site and sign up (first account = admin).
 - [ ] Upload a small PDF and watch it reach **completed** in the processing panel.
-- [ ] Search for something in it.
+- [ ] Search for something in it, and check the AI answer appears above the results.
 - [ ] Open **System Overview** and check the Member Directory.
