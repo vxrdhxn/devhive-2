@@ -12,7 +12,7 @@ function resolveProvider(): Provider | null {
     return { name: "custom", baseUrl: e.LLM_BASE_URL.replace(/\/+$/, ""), apiKey: e.LLM_API_KEY, model: e.LLM_MODEL || "gpt-4o-mini" }
   }
   if (e.GROQ_API_KEY) {
-    return { name: "groq", baseUrl: "https://api.groq.com/openai/v1", apiKey: e.GROQ_API_KEY, model: e.GROQ_MODEL || "llama-3.1-8b-instant" }
+    return { name: "groq", baseUrl: "https://api.groq.com/openai/v1", apiKey: e.GROQ_API_KEY, model: e.GROQ_MODEL || "openai/gpt-oss-20b" }
   }
   if (e.NEON_AI_GATEWAY_BASE_URL && e.NEON_AI_GATEWAY_TOKEN) {
     return { name: "neon", baseUrl: `${e.NEON_AI_GATEWAY_BASE_URL.replace(/\/+$/, "")}/v1`, apiKey: e.NEON_AI_GATEWAY_TOKEN, model: e.LLM_MODEL || "claude-haiku-4-5" }
@@ -68,7 +68,10 @@ ${question}
           { role: "user", content: prompt },
         ],
         temperature: 0.3,
-        max_tokens: 2048,
+        // gpt-oss models reason before answering, and the reasoning counts against
+        // max_tokens: keep it short and leave room for a full answer.
+        max_tokens: 4096,
+        ...(/gpt-oss/.test(provider.model) ? { reasoning_effort: "low" } : {}),
       }),
       signal: AbortSignal.timeout(60_000),
     })
