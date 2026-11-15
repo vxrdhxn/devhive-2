@@ -21,7 +21,10 @@ const nextConfig: NextConfig = {
       [
         "node_modules/onnxruntime-node/package.json",
         "node_modules/onnxruntime-node/dist/**",
-        `${ORT_BIN}/linux/x64/**`,
+        // CPU runtime only. On linux-x64, onnxruntime-node's postinstall also downloads
+        // CUDA/TensorRT providers (hundreds of MB) that Vercel's CPU-only functions never use.
+        `${ORT_BIN}/linux/x64/libonnxruntime.so.1`,
+        `${ORT_BIN}/linux/x64/onnxruntime_binding.node`,
         "node_modules/onnxruntime-common/**",
         "node_modules/@huggingface/transformers/node_modules/**",
         "node_modules/@img/**",
@@ -36,6 +39,8 @@ const nextConfig: NextConfig = {
       `${ORT_BIN}/darwin/**`,
       `${ORT_BIN}/win32/**`,
       `${ORT_BIN}/linux/arm64/**`,
+      `${ORT_BIN}/linux/x64/libonnxruntime_providers_*`,
+      "node_modules/onnxruntime-web/dist/*.map",
       "node_modules/onnxruntime-web/dist/*.wasm",
       "node_modules/onnxruntime-web/dist/*.jsep.*",
       "node_modules/onnxruntime-web/dist/*.webgpu.*",
